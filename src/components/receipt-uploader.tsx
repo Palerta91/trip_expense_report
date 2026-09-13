@@ -21,7 +21,7 @@ function toDraft(expense: Expense): Draft {
   return {
     title: expense.title ?? "",
     merchantOriginal: expense.merchantOriginal ?? "",
-    merchant: expense.merchant === "Ожидается распознавание" || expense.merchant === "Не определено" ? "" : expense.merchant,
+    merchant: expense.merchant === "Ожидается распознавание" || expense.merchant === "Заполните данные вручную" || expense.merchant === "Не определено" ? "" : expense.merchant,
     expenseDate: expense.expenseDate,
     categoryId: expense.categoryId ?? "",
     amount: Number(expense.amount) > 0 ? expense.amount : "",
@@ -38,7 +38,8 @@ function messageForStatus(status: ReceiptStatus) {
   return null;
 }
 
-export function ReceiptUploader({ tripId, categories, initialReceiptId }: { tripId: string; categories: Category[]; initialReceiptId?: string }) {
+export function ReceiptUploader({ tripId, categories, initialReceiptId, mode = "recognition", showUploadForm = true }: { tripId: string; categories: Category[]; initialReceiptId?: string; mode?: "recognition" | "manual"; showUploadForm?: boolean }) {
+  const isManual = mode === "manual";
   const [file, setFile] = useState<File | null>(null);
   const [uploadMessage, setUploadMessage] = useState<string | null>(null);
   const [receiptId, setReceiptId] = useState<string | null>(initialReceiptId ?? null);
@@ -98,6 +99,7 @@ export function ReceiptUploader({ tripId, categories, initialReceiptId }: { trip
     const data = new FormData();
     data.set("tripId", tripId);
     data.set("file", uploadedFile);
+    if (isManual) data.set("recognize", "false");
     try {
       const response = await fetch("/api/receipts", { method: "POST", body: data });
       const result = await response.json() as { receiptId?: string; message?: string };
@@ -155,17 +157,19 @@ export function ReceiptUploader({ tripId, categories, initialReceiptId }: { trip
   const isImage = receipt?.mimeType.startsWith("image/") ?? file?.type.startsWith("image/") ?? false;
 
   return <>
-    <form className="card form-card receipt-upload-form" onSubmit={upload}>
+    {showUploadForm && <form className="card form-card receipt-upload-form" onSubmit={upload}>
       <div className="form-grid"><div className="field full"><label htmlFor="receipt">Файл чека</label><input id="receipt" name="receipt" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" capture="environment" required onChange={(event) => setFile(event.target.files?.[0] ?? null)} /><span className="expense-sub">JPG, PNG, WEBP или PDF — до 10 МБ. Оригинал хранится в MinIO на вашем сервере.</span></div></div>
+      {isManual && <p className="callout">Чек или скриншот обязателен: он попадёт в реестр чеков, но не будет отправлен на распознавание ИИ.</p>}
       {uploadMessage && <p className="callout">{uploadMessage}</p>}
-      <div className="form-actions"><button className="button" type="submit" disabled={!file || pending}>{pending ? <><LoaderCircle size={17} className="spin" />Загрузка…</> : <><UploadCloud size={17} />Загрузить и распознать</>}</button></div>
+      <div className="form-actions"><button className="button" type="submit" disabled={!file || pending}>{pending ? <><LoaderCircle size={17} className="spin" />Загрузка…</> : <><UploadCloud size={17} />{isManual ? "Загрузить чек" : "Загрузить и распознать"}</>}</button></div>
     </form>
+    }
 
     {receipt && <section className="receipt-result" aria-live="polite">
       <div className="receipt-preview card">{isImage && previewUrl ? <img src={previewUrl} alt={`Превью: ${receipt.originalName}`} /> : <div className="file-preview"><ScanLine size={28} /><span>{receipt.originalName}</span><a href={previewUrl ?? "#"} target="_blank">Открыть файл</a></div>}</div>
       <div className="receipt-result-content">
         {processingMessage ? <div className="card receipt-processing"><LoaderCircle size={21} className="spin" /><div><strong>{processingMessage}</strong><p>Поля расхода появятся автоматически. Можно не закрывать страницу.</p></div></div> : draft && <form className="card recognition-form" onSubmit={saveExpense}>
-          <div className="recognition-form-heading"><div><span className="eyebrow">Результат обработки</span><h2>Проверьте расход</h2><p className="expense-sub">Данные можно исправить перед сохранением.</p></div>{receipt.status === "FAILED" && <span className="recognition-status failed"><CircleAlert size={15} />Распознавание не завершилось</span>}{receipt.status === "READY_FOR_REVIEW" && <span className="recognition-status ready"><CheckCircle2 size={15} />Готово к проверке</span>}</div>
+          <div className="recognition-form-heading"><div><span className="eyebrow">{isManual ? "Ручной ввод" : "Результат обработки"}</span><h2>{isManual ? "Заполните расход" : "Проверьте расход"}</h2><p className="expense-sub">Данные можно исправить перед сохранением.</p></div>{receipt.status === "FAILED" && <span className="recognition-status failed"><CircleAlert size={15} />Распознавание не завершилось</span>}{receipt.status === "READY_FOR_REVIEW" && <span className="recognition-status ready"><CheckCircle2 size={15} />{isManual ? "Чек сохранён" : "Готово к проверке"}</span>}</div>
           {receipt.status === "FAILED" && <p className="callout error-callout">{receipt.errorMessage ? `Не удалось извлечь все данные: ${receipt.errorMessage}` : "Не удалось извлечь все данные. Заполните форму вручную."}</p>}
           <div className="form-grid recognition-grid">
             <div className="field full"><label htmlFor="title">Название</label><input id="title" value={draft.title} onChange={(event) => change("title", event.target.value)} placeholder="Для билета маршрут появится автоматически" maxLength={180} disabled={!canEdit} /></div>

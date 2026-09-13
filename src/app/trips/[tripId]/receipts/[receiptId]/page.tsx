@@ -35,7 +35,7 @@ export default async function ReceiptDetailPage({ params }: { params: Promise<{ 
   const expense = result.expense;
 
   return <AppShell userName={user.name} userRole={user.role}>
-    <div className="page-heading receipt-detail-heading"><div><Link className="back-link" href={`/trips/${tripId}`}><ArrowLeft size={16} />К командировке</Link><span className="eyebrow">Чек</span><h1>{expense?.title || expense?.merchant || result.receipt.originalName}</h1><p className="lead">{result.tripTitle} · добавил(а) {result.uploaderName}</p></div>{canManage && <ReceiptActions receiptId={receiptId} tripId={tripId} />}</div>
+    <div className="page-heading receipt-detail-heading"><div><Link className="back-link" href={`/trips/${tripId}`}><ArrowLeft size={16} />К командировке</Link><span className="eyebrow">Чек</span><h1>{expense?.title || expense?.merchant || result.receipt.originalName}</h1><p className="lead">{result.tripTitle} · добавил(а) {result.uploaderName}</p></div>{canManage && <ReceiptActions receiptId={receiptId} tripId={tripId} editHref={`/trips/${tripId}/receipts/${receiptId}/edit`} />}</div>
     <section className="receipt-detail-layout">
       <div className="card receipt-detail-preview">{isImage ? <img src={previewUrl} alt={`Чек: ${result.receipt.originalName}`} /> : <div className="file-preview"><FileText size={30} /><span>{result.receipt.originalName}</span><a href={previewUrl} target="_blank">Открыть PDF</a></div>}</div>
       <section className="card receipt-details" aria-labelledby="receipt-fields-heading"><div className="receipt-details-heading"><div><span className="eyebrow">Извлечённые данные</span><h2 id="receipt-fields-heading">Поля расхода</h2></div><ScanLine size={20} /></div>

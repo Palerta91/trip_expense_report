@@ -128,39 +128,6 @@ export async function updateTripBudget(tripId: string, formData: FormData) {
   redirect(`/trips/${tripId}`);
 }
 
-export async function createManualExpense(tripId: string, formData: FormData) {
-  const user = await requireUser();
-  if (user.role !== "ADMIN") await ensureTripMember(tripId, user.id);
-  const parsed = expenseInput.safeParse({
-    title: formData.get("title") || undefined,
-    categoryId: formData.get("categoryId") || undefined,
-    expenseDate: formData.get("expenseDate"),
-    merchant: formData.get("merchant"),
-    merchantOriginal: formData.get("merchantOriginal") || undefined,
-    description: formData.get("description") || undefined,
-    amount: formData.get("amount"),
-    currency: formData.get("currency"),
-    exchangeRate: formData.get("exchangeRate"),
-    paymentMethod: formData.get("paymentMethod") || undefined
-  });
-  if (!parsed.success) throw new Error(parsed.error.issues[0]?.message ?? "Проверьте форму");
-
-  const { exchangeRate, amount, currency, ...rest } = parsed.data;
-  const rate = exchangeRate === "" || exchangeRate === undefined ? (currency === "RUB" ? 1 : undefined) : exchangeRate;
-  await db.insert(expenses).values({
-    ...rest,
-    tripId,
-    claimantId: user.id,
-    amount: amount.toFixed(2),
-    currency,
-    exchangeRate: rate?.toFixed(6),
-    amountRub: rate ? (amount * rate).toFixed(2) : null,
-    source: "MANUAL"
-  });
-  revalidatePath(`/trips/${tripId}`);
-  redirect(`/trips/${tripId}`);
-}
-
 export async function updateExpense(expenseId: string, formData: FormData) {
   const user = await requireUser();
   const [existing] = await db.select().from(expenses).where(eq(expenses.id, expenseId)).limit(1);

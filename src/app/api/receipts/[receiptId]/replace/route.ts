@@ -35,10 +35,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ rec
   const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-120) || "receipt";
   const objectKey = `receipts/${receipt.tripId}/${randomUUID()}-${safeName}`;
   await putReceipt(objectKey, file);
-  const recognitionEnabled = process.env.ENABLE_MINIMAX_RECOGNITION === "true" && Boolean(process.env.MINIMAX_API_KEY);
+  const [linkedExpense] = await db.select({ source: expenses.source }).from(expenses).where(eq(expenses.receiptId, receipt.id)).limit(1);
+  const shouldRecognize = linkedExpense?.source !== "MANUAL";
+  const recognitionEnabled = shouldRecognize && process.env.ENABLE_MINIMAX_RECOGNITION === "true" && Boolean(process.env.MINIMAX_API_KEY);
   await db.transaction(async (tx) => {
     await tx.update(receipts).set({ objectKey, originalName: file.name.slice(0, 255), mimeType: file.type, byteSize: file.size, status: recognitionEnabled ? "UPLOADED" : "READY_FOR_REVIEW", extracted: null, errorMessage: null }).where(eq(receipts.id, receipt.id));
-    await tx.update(expenses).set({ title: null, merchant: "Ожидается распознавание", merchantOriginal: null, categoryId: null, description: null, amount: "0.00", currency: "RUB", exchangeRate: "1.000000", amountRub: "0.00", paymentMethod: null, expenseDate: new Date().toISOString().slice(0, 10), updatedAt: new Date() }).where(eq(expenses.receiptId, receipt.id));
+    await tx.update(expenses).set({ title: null, merchant: recognitionEnabled ? "Ожидается распознавание" : "Заполните данные вручную", merchantOriginal: null, categoryId: null, description: null, amount: "0.00", currency: "RUB", exchangeRate: "1.000000", amountRub: "0.00", paymentMethod: null, expenseDate: new Date().toISOString().slice(0, 10), updatedAt: new Date() }).where(eq(expenses.receiptId, receipt.id));
     if (recognitionEnabled) await tx.insert(recognitionJobs).values({ receiptId: receipt.id, status: "PENDING", attempts: 0, errorMessage: null, processedAt: null }).onConflictDoUpdate({ target: recognitionJobs.receiptId, set: { status: "PENDING", attempts: 0, errorMessage: null, processedAt: null, createdAt: new Date() } });
   });
   await deleteReceiptObjects([receipt.objectKey]);

@@ -29,7 +29,7 @@ export default async function TripPage({ params }: { params: Promise<{ tripId: s
 
   const [receiptRows, budget] = await Promise.all([
     db
-      .select({ id: receipts.id, title: expenses.title, merchant: expenses.merchant, expenseDate: expenses.expenseDate, currency: expenses.currency, amount: expenses.amount, createdAt: receipts.createdAt, status: receipts.status })
+      .select({ id: receipts.id, uploadedBy: receipts.uploadedBy, title: expenses.title, merchant: expenses.merchant, expenseDate: expenses.expenseDate, currency: expenses.currency, amount: expenses.amount, createdAt: receipts.createdAt, status: receipts.status })
       .from(receipts)
       .leftJoin(expenses, eq(expenses.receiptId, receipts.id))
       .where(eq(receipts.tripId, tripId))
@@ -54,7 +54,7 @@ export default async function TripPage({ params }: { params: Promise<{ tripId: s
 
       <section className="trip-workbench" aria-label="Действия с командировкой">
         <Link className="workbench-action receipt-action" href={`/trips/${tripId}/receipts/new`}><span><ReceiptText size={21} /></span><div><strong>Подгрузить чек</strong><small>Фото, файл или скан</small></div><FileUp size={18} /></Link>
-        <Link className="workbench-action expense-action" href={`/trips/${tripId}/expenses/new`}><span><WalletCards size={21} /></span><div><strong>Добавить расход</strong><small>Ручной ввод без чека</small></div><Plus size={18} /></Link>
+        <Link className="workbench-action expense-action" href={`/trips/${tripId}/expenses/new`}><span><WalletCards size={21} /></span><div><strong>Добавить расход</strong><small>Ручной ввод с обязательным чеком</small></div><Plus size={18} /></Link>
       </section>
 
       <section className="card trip-budget-summary">
@@ -64,7 +64,7 @@ export default async function TripPage({ params }: { params: Promise<{ tripId: s
 
       <section className="receipts-section">
         <div className="section-heading"><div><span className="eyebrow">Документы</span><h2>Чеки</h2><p className="lead">{receiptRows.length} шт. · по умолчанию в хронологии операций</p></div><Link className="section-link" href={`/trips/${tripId}/receipts/new`}>Добавить <Plus size={16} /></Link></div>
-        {receiptRows.length === 0 ? <div className="card empty"><p>Чеков пока нет.</p><p className="expense-sub">Загрузите фото, скан или PDF — результат появится в этом разделе.</p></div> : <ReceiptList tripId={tripId} receipts={receiptRows.map((receipt) => ({ ...receipt, createdAt: receipt.createdAt.toISOString() }))} />}
+        {receiptRows.length === 0 ? <div className="card empty"><p>Чеков пока нет.</p><p className="expense-sub">Загрузите фото, скан или PDF — результат появится в этом разделе.</p></div> : <ReceiptList tripId={tripId} receipts={receiptRows.map((receipt) => ({ ...receipt, canEdit: user.role === "ADMIN" || receipt.uploadedBy === user.id, createdAt: receipt.createdAt.toISOString() }))} />}
       </section>
     </AppShell>
   );

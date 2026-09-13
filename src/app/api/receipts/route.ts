@@ -18,6 +18,7 @@ export async function POST(request: Request) {
 
   const formData = await request.formData();
   const parsed = z.object({ tripId: z.string().uuid() }).safeParse({ tripId: formData.get("tripId") });
+  const recognize = formData.get("recognize") !== "false";
   const file = formData.get("file");
   if (!parsed.success || !(file instanceof File)) return NextResponse.json({ message: "Передайте командировку и файл" }, { status: 400 });
   if (!allowedTypes.has(file.type)) return NextResponse.json({ message: "Поддерживаются JPG, PNG, WEBP и PDF" }, { status: 400 });
@@ -32,7 +33,7 @@ export async function POST(request: Request) {
   const objectKey = `receipts/${parsed.data.tripId}/${randomUUID()}-${safeName}`;
   await putReceipt(objectKey, file);
 
-  const recognitionEnabled = process.env.ENABLE_MINIMAX_RECOGNITION === "true" && Boolean(process.env.MINIMAX_API_KEY);
+  const recognitionEnabled = recognize && process.env.ENABLE_MINIMAX_RECOGNITION === "true" && Boolean(process.env.MINIMAX_API_KEY);
   const [receipt] = await db.transaction(async (tx) => {
     const [created] = await tx.insert(receipts).values({
       tripId: parsed.data.tripId,
@@ -47,9 +48,9 @@ export async function POST(request: Request) {
       tripId: parsed.data.tripId,
       claimantId: user.id,
       receiptId: created.id,
-      source: "RECEIPT",
+      source: recognize ? "RECEIPT" : "MANUAL",
       expenseDate: new Date().toISOString().slice(0, 10),
-      merchant: "Ожидается распознавание",
+      merchant: recognize ? "Ожидается распознавание" : "Заполните данные вручную",
       amount: "0.00",
       currency: "RUB",
       exchangeRate: "1.000000",
@@ -61,6 +62,10 @@ export async function POST(request: Request) {
 
   return NextResponse.json({
     receiptId: receipt.id,
-    message: recognitionEnabled ? "Чек загружен. Распознаём данные — форма появится ниже." : "Чек загружен. Заполните поля расхода ниже вручную."
+    message: recognitionEnabled
+      ? "Чек загружен. Распознаём данные — форма появится ниже."
+      : recognize
+        ? "Чек загружен. Распознавание недоступно — заполните поля расхода ниже вручную."
+        : "Чек загружен и сохранён. Заполните поля расхода ниже вручную."
   }, { status: 201 });
 }
