@@ -24,6 +24,7 @@ export default async function NewExpensePage({ params }: { params: Promise<{ tri
       <div className="page-heading"><div><h1>Добавить расход</h1><p className="lead">{trip.title} · ручной ввод без чека и распознавания.</p></div></div>
       <form className="card form-card" action={action}>
         <div className="form-grid">
+          <div className="field full"><label htmlFor="title">Название</label><input id="title" name="title" placeholder="Например, Москва — Пекин для билета" maxLength={180} /></div>
           <div className="field"><label htmlFor="expenseDate">Дата расхода</label><input id="expenseDate" name="expenseDate" type="date" required /></div>
           <div className="field"><label htmlFor="categoryId">Категория</label><select id="categoryId" name="categoryId" defaultValue=""><option value="">Не выбрана</option>{categoryRows.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></div>
           <div className="field full"><label htmlFor="merchant">Продавец / поставщик</label><input id="merchant" name="merchant" placeholder="Например: РЖД" required minLength={2} /></div>

@@ -6,6 +6,7 @@ import { categories, expenses, recognitionJobs, receipts } from "@/lib/db/schema
 import { getStorage } from "@/lib/storage";
 
 const extractedSchema = z.object({
+  title: z.string().trim().max(180).optional().catch(undefined),
   merchantOriginal: z.string().trim().max(180).optional().catch(undefined),
   merchantRussian: z.string().trim().max(180).optional().catch(undefined),
   expenseDate: z.string().date().catch(new Date().toISOString().slice(0, 10)),
@@ -43,7 +44,7 @@ async function recognize(file: Buffer, mimeType: string) {
       model,
       temperature: 0,
       messages: [
-        { role: "system", content: "Извлеки данные из чека или подтверждения оплаты. Верни только JSON: merchantOriginal, merchantRussian, expenseDate (YYYY-MM-DD), amount (number), currency (ISO 4217), category, paymentMethod, comment. Для китайского чека merchantOriginal — точное название или имя получателя на китайском, merchantRussian — его перевод на русский. Для русского чека merchantRussian — название как в чеке, merchantOriginal можно не передавать. category выбери из типовых: Проживание, Проезд, Питание, Такси, Связь, Прочее. Если поле не видно, верни пустую строку, не выдумывай. Сумму возвращай числом без разделителей." },
+        { role: "system", content: "Извлеки данные из чека или подтверждения оплаты. Верни только JSON: title, merchantOriginal, merchantRussian, expenseDate (YYYY-MM-DD), amount (number), currency (ISO 4217), category, paymentMethod, comment. title: если это билет, автоматически укажи направление движения в формате «Откуда — Куда»; если это покупка в магазине или иной обычный чек, верни пустую строку. Для китайского чека merchantOriginal — точное название или имя получателя на китайском, merchantRussian — его перевод на русский. Для русского чека merchantRussian — название как в чеке, merchantOriginal можно не передавать. category выбери из типовых: Проживание, Проезд, Питание, Такси, Связь, Прочее. Если поле не видно, верни пустую строку, не выдумывай. Сумму возвращай числом без разделителей." },
         { role: "user", content: [{ type: "text", text: "Распознай этот чек." }, { type: "image_url", image_url: { url: image } }] }
       ]
     })
@@ -84,6 +85,7 @@ async function processOne() {
         claimantId: receipt.uploadedBy,
         receiptId: receipt.id,
         source: "RECEIPT" as const,
+        title: extracted.title || null,
         expenseDate: extracted.expenseDate,
         merchant,
         merchantOriginal: extracted.merchantOriginal || null,

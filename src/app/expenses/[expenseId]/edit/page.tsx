@@ -22,6 +22,7 @@ export default async function EditExpensePage({ params }: { params: Promise<{ ex
       <div className="page-heading"><div><h1>Проверить расход</h1><p className="lead">{result.tripTitle} · данные из чека всегда нужно подтвердить вручную.</p></div></div>
       <form className="card form-card" action={action}>
         <div className="form-grid">
+          <div className="field full"><label htmlFor="title">Название</label><input id="title" name="title" maxLength={180} defaultValue={expense.title ?? ""} placeholder="Например, Москва — Пекин для билета" /></div>
           <div className="field"><label htmlFor="expenseDate">Дата расхода</label><input id="expenseDate" name="expenseDate" type="date" required defaultValue={expense.expenseDate} /></div>
           <div className="field"><label htmlFor="categoryId">Категория</label><select id="categoryId" name="categoryId" defaultValue={expense.categoryId ?? ""}><option value="">Не выбрана</option>{categoryRows.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></div>
           <div className="field full"><label htmlFor="merchantOriginal">Название / получатель на языке чека</label><input id="merchantOriginal" name="merchantOriginal" defaultValue={expense.merchantOriginal ?? ""} placeholder="Например, название на китайском" /></div>

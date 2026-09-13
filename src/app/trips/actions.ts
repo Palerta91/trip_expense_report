@@ -19,6 +19,7 @@ const tripInput = z.object({
 });
 
 const expenseInput = z.object({
+  title: z.string().trim().max(180).optional(),
   categoryId: z.string().uuid().optional(),
   expenseDate: z.string().date(),
   merchant: z.string().trim().min(2, "Укажите продавца или поставщика").max(180),
@@ -131,6 +132,7 @@ export async function createManualExpense(tripId: string, formData: FormData) {
   const user = await requireUser();
   if (user.role !== "ADMIN") await ensureTripMember(tripId, user.id);
   const parsed = expenseInput.safeParse({
+    title: formData.get("title") || undefined,
     categoryId: formData.get("categoryId") || undefined,
     expenseDate: formData.get("expenseDate"),
     merchant: formData.get("merchant"),
@@ -165,6 +167,7 @@ export async function updateExpense(expenseId: string, formData: FormData) {
   if (!existing || existing.claimantId !== user.id) throw new Error("Можно редактировать только собственные расходы");
   await ensureTripMember(existing.tripId, user.id);
   const parsed = expenseInput.safeParse({
+    title: formData.get("title") || undefined,
     categoryId: formData.get("categoryId") || undefined,
     expenseDate: formData.get("expenseDate"),
     merchant: formData.get("merchant"),

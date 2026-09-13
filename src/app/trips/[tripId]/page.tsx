@@ -1,13 +1,14 @@
 import Link from "next/link";
-import { and, asc, desc, eq } from "drizzle-orm";
-import { BarChart3, FileDown, FileUp, PencilLine, Plus, ReceiptText, UsersRound, WalletCards } from "lucide-react";
+import { and, asc, eq } from "drizzle-orm";
+import { BarChart3, FileDown, FileUp, Plus, ReceiptText, UsersRound, WalletCards } from "lucide-react";
 import { notFound } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { DeleteTripButton } from "@/components/delete-trip-button";
+import { ReceiptList } from "@/components/receipt-list";
 import { requireUser } from "@/lib/auth";
 import { getTripBudgetOverview } from "@/lib/budgets";
 import { db } from "@/lib/db";
-import { categories, expenses, tripMembers, trips } from "@/lib/db/schema";
+import { expenses, receipts, tripMembers, trips } from "@/lib/db/schema";
 
 export const dynamic = "force-dynamic";
 
@@ -26,16 +27,15 @@ export default async function TripPage({ params }: { params: Promise<{ tripId: s
       .limit(1);
   if (!result) notFound();
 
-  const [expenseRows, budget] = await Promise.all([
+  const [receiptRows, budget] = await Promise.all([
     db
-      .select({ expense: expenses, categoryName: categories.name })
-      .from(expenses)
-      .leftJoin(categories, eq(expenses.categoryId, categories.id))
-      .where(eq(expenses.tripId, tripId))
-      .orderBy(desc(expenses.expenseDate), asc(expenses.createdAt)),
+      .select({ id: receipts.id, title: expenses.title, merchant: expenses.merchant, expenseDate: expenses.expenseDate, currency: expenses.currency, amount: expenses.amount, createdAt: receipts.createdAt, status: receipts.status })
+      .from(receipts)
+      .leftJoin(expenses, eq(expenses.receiptId, receipts.id))
+      .where(eq(receipts.tripId, tripId))
+      .orderBy(asc(expenses.expenseDate), asc(receipts.createdAt)),
     getTripBudgetOverview(tripId)
   ]);
-  const totalRub = expenseRows.reduce((sum, row) => sum + Number(row.expense.amountRub ?? 0), 0);
   const canManageBudget = user.role === "ADMIN" || result.trip.managerId === user.id || result.trip.budgetEditorId === user.id;
   const canManageMembers = user.role === "ADMIN" || result.trip.managerId === user.id;
   const progress = budget.totalPlanRub ? Math.min((budget.totalFactRub / budget.totalPlanRub) * 100, 100) : 0;
@@ -62,17 +62,9 @@ export default async function TripPage({ params }: { params: Promise<{ tripId: s
         {budget.totalPlanRub ? <><div className="budget-totals"><div><span>План</span><strong>{formatMoney(budget.totalPlanRub, "RUB")}</strong></div><div><span>Факт</span><strong className={budget.totalFactRub > budget.totalPlanRub ? "amount-over" : ""}>{formatMoney(budget.totalFactRub, "RUB")}</strong></div><div><span>Остаток</span><strong className={budget.totalFactRub > budget.totalPlanRub ? "amount-over" : ""}>{formatMoney(budget.totalPlanRub - budget.totalFactRub, "RUB")}</strong></div></div><div className="progress-track large"><span className={budget.totalFactRub > budget.totalPlanRub ? "over" : ""} style={{ width: `${progress}%` }} /></div><div className="budget-summary-caption">Освоено {Math.round((budget.totalFactRub / budget.totalPlanRub) * 100)}% бюджета · подробности в дашборде руководителя</div></> : <div className="budget-empty"><BarChart3 size={20} /><span>Целевой бюджет пока не задан. Добавьте лимиты по статьям, чтобы видеть план и факт.</span></div>}
       </section>
 
-      <section className="expenses-section">
-        <div className="section-heading"><div><span className="eyebrow">Расходы</span><h2>Статьи расходов</h2><p className="lead">{expenseRows.length} поз. · Всего {formatMoney(totalRub, "RUB")}</p></div><Link className="section-link" href={`/trips/${tripId}/expenses/new`}>Добавить <Plus size={16} /></Link></div>
-        {expenseRows.length === 0 ? <div className="card empty"><p>Расходов пока нет.</p><p className="expense-sub">Загрузите чек или внесите данные вручную — распознавание не обязательно.</p></div> : <div className="card expense-list">
-          {expenseRows.map(({ expense, categoryName }) => <div className="expense-row" key={expense.id}>
-            <span className="expense-category-icon"><WalletCards size={17} /></span>
-            <div><div className="expense-merchant">{expense.merchant}</div><div className="expense-sub">{categoryName ?? "Без категории"} · {expense.expenseDate} · {expense.source === "MANUAL" ? "Вручную" : "Из чека"}</div></div>
-            <div className="expense-payment">{expense.paymentMethod ?? "Способ оплаты не указан"}</div>
-            <div className="expense-amount"><div className="amount">{formatMoney(expense.amount, expense.currency)}</div><div className="amount-rub">{expense.amountRub ? `≈ ${formatMoney(expense.amountRub, "RUB")}` : "Курс не указан"}</div></div>
-            {expense.claimantId === user.id && <Link aria-label="Редактировать расход" href={`/expenses/${expense.id}/edit`} className="edit-expense"><PencilLine size={16} /></Link>}
-          </div>)}
-        </div>}
+      <section className="receipts-section">
+        <div className="section-heading"><div><span className="eyebrow">Документы</span><h2>Чеки</h2><p className="lead">{receiptRows.length} шт. · по умолчанию в хронологии операций</p></div><Link className="section-link" href={`/trips/${tripId}/receipts/new`}>Добавить <Plus size={16} /></Link></div>
+        {receiptRows.length === 0 ? <div className="card empty"><p>Чеков пока нет.</p><p className="expense-sub">Загрузите фото, скан или PDF — результат появится в этом разделе.</p></div> : <ReceiptList tripId={tripId} receipts={receiptRows.map((receipt) => ({ ...receipt, createdAt: receipt.createdAt.toISOString() }))} />}
       </section>
     </AppShell>
   );

@@ -101,6 +101,7 @@ export const expenses = pgTable("expenses", {
   receiptId: uuid("receipt_id").unique().references(() => receipts.id, { onDelete: "set null" }),
   source: expenseSource("source").notNull(),
   status: expenseStatus("status").notNull().default("DRAFT"),
+  title: varchar("title", { length: 180 }),
   expenseDate: date("expense_date").notNull(),
   merchant: varchar("merchant", { length: 180 }).notNull(),
   merchantOriginal: varchar("merchant_original", { length: 180 }),

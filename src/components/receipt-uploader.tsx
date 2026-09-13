@@ -6,8 +6,8 @@ import { CheckCircle2, CircleAlert, LoaderCircle, RefreshCw, Save, ScanLine, Upl
 type Category = { id: string; name: string };
 type ReceiptStatus = "UPLOADED" | "PROCESSING" | "READY_FOR_REVIEW" | "FAILED";
 type Receipt = { id: string; originalName: string; mimeType: string; status: ReceiptStatus; errorMessage: string | null };
-type Expense = { id: string; merchant: string; merchantOriginal: string | null; expenseDate: string; categoryId: string | null; amount: string; currency: string; exchangeRate: string | null; amountRub: string | null; paymentMethod: string | null; description: string | null };
-type Draft = { merchantOriginal: string; merchant: string; expenseDate: string; categoryId: string; amount: string; currency: string; exchangeRate: string; paymentMethod: string; description: string };
+type Expense = { id: string; title: string | null; merchant: string; merchantOriginal: string | null; expenseDate: string; categoryId: string | null; amount: string; currency: string; exchangeRate: string | null; amountRub: string | null; paymentMethod: string | null; description: string | null };
+type Draft = { title: string; merchantOriginal: string; merchant: string; expenseDate: string; categoryId: string; amount: string; currency: string; exchangeRate: string; paymentMethod: string; description: string };
 
 const currencyOptions = [
   ["RUB", "RUB — российский рубль"],
@@ -19,6 +19,7 @@ const currencyOptions = [
 
 function toDraft(expense: Expense): Draft {
   return {
+    title: expense.title ?? "",
     merchantOriginal: expense.merchantOriginal ?? "",
     merchant: expense.merchant === "Ожидается распознавание" || expense.merchant === "Не определено" ? "" : expense.merchant,
     expenseDate: expense.expenseDate,
@@ -167,6 +168,7 @@ export function ReceiptUploader({ tripId, categories, initialReceiptId }: { trip
           <div className="recognition-form-heading"><div><span className="eyebrow">Результат обработки</span><h2>Проверьте расход</h2><p className="expense-sub">Данные можно исправить перед сохранением.</p></div>{receipt.status === "FAILED" && <span className="recognition-status failed"><CircleAlert size={15} />Распознавание не завершилось</span>}{receipt.status === "READY_FOR_REVIEW" && <span className="recognition-status ready"><CheckCircle2 size={15} />Готово к проверке</span>}</div>
           {receipt.status === "FAILED" && <p className="callout error-callout">{receipt.errorMessage ? `Не удалось извлечь все данные: ${receipt.errorMessage}` : "Не удалось извлечь все данные. Заполните форму вручную."}</p>}
           <div className="form-grid recognition-grid">
+            <div className="field full"><label htmlFor="title">Название</label><input id="title" value={draft.title} onChange={(event) => change("title", event.target.value)} placeholder="Для билета маршрут появится автоматически" maxLength={180} disabled={!canEdit} /></div>
             <div className="field"><label htmlFor="merchantOriginal">Название / получатель на языке чека</label><input id="merchantOriginal" value={draft.merchantOriginal} onChange={(event) => change("merchantOriginal", event.target.value)} placeholder="Например, 支付宝" disabled={!canEdit} /></div>
             <div className="field"><label htmlFor="merchant">Название / получатель на русском</label><input id="merchant" value={draft.merchant} onChange={(event) => change("merchant", event.target.value)} placeholder="Перевод или название на русском" required disabled={!canEdit} /></div>
             <div className="field"><label htmlFor="expenseDate">Дата оплаты</label><input id="expenseDate" type="date" value={draft.expenseDate} onChange={(event) => change("expenseDate", event.target.value)} required disabled={!canEdit} /></div>

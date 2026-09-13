@@ -4,10 +4,12 @@ import { z } from "zod";
 import { getSessionUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { expenses, receipts, tripMembers } from "@/lib/db/schema";
+import { deleteReceiptObjects } from "@/lib/storage";
 
 export const runtime = "nodejs";
 
 const expensePayload = z.object({
+  title: z.string().trim().max(180).optional(),
   merchantOriginal: z.string().trim().max(180).optional(),
   merchant: z.string().trim().min(2, "Укажите название или получателя на русском").max(180),
   expenseDate: z.string().date(),
@@ -77,4 +79,19 @@ export async function PUT(request: Request, { params }: { params: Promise<{ rece
   else await db.insert(expenses).values({ ...values, tripId: result.receipt.tripId, claimantId: result.receipt.uploadedBy, receiptId: result.receipt.id, source: "RECEIPT" });
   const [updated] = await db.select().from(expenses).where(eq(expenses.receiptId, result.receipt.id)).limit(1);
   return NextResponse.json({ expense: updated, message: "Расход сохранён" });
+}
+
+export async function DELETE(_: Request, { params }: { params: Promise<{ receiptId: string }> }) {
+  const { receiptId } = await params;
+  const parsedId = z.string().uuid().safeParse(receiptId);
+  if (!parsedId.success) return NextResponse.json({ message: "Некорректный идентификатор чека" }, { status: 400 });
+  const result = await getAccessibleReceipt(parsedId.data);
+  if ("response" in result) return result.response;
+  if (result.user.role !== "ADMIN" && result.receipt.uploadedBy !== result.user.id) return NextResponse.json({ message: "Удалить чек может автор загрузки или администратор" }, { status: 403 });
+  await deleteReceiptObjects([result.receipt.objectKey]);
+  await db.transaction(async (tx) => {
+    await tx.delete(expenses).where(eq(expenses.receiptId, result.receipt.id));
+    await tx.delete(receipts).where(eq(receipts.id, result.receipt.id));
+  });
+  return NextResponse.json({ message: "Чек и связанный расход удалены" });
 }
