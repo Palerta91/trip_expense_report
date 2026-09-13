@@ -3,7 +3,7 @@ import { and, asc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { expenses, recognitionJobs, receipts } from "@/lib/db/schema";
-import { s3, storageBucket } from "@/lib/storage";
+import { getStorage } from "@/lib/storage";
 
 const extractedSchema = z.object({
   merchant: z.string().min(1).max(180).catch("Не определено"),
@@ -16,7 +16,8 @@ const extractedSchema = z.object({
 });
 
 async function getBuffer(key: string) {
-  const response = await s3.send(new GetObjectCommand({ Bucket: storageBucket, Key: key }));
+  const { client, bucket } = getStorage();
+  const response = await client.send(new GetObjectCommand({ Bucket: bucket, Key: key }));
   if (!response.Body) throw new Error("Файл чека не найден в хранилище");
   const bytes = await response.Body.transformToByteArray();
   return Buffer.from(bytes);
