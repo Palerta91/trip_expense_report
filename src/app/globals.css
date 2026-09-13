@@ -181,6 +181,15 @@ h2 { margin-bottom: 0; color: var(--ink); font-size: 21px; line-height: 1.16; le
 .edit-expense:hover { color: var(--blue-deep); border-color: #b9d9ff; background: var(--blue-soft); }
 
 .dashboard-hero { align-items: center; }
+.dashboard-categories-link { display: inline-flex; align-items: center; gap: 6px; margin-top: 13px; color: var(--blue-deep); font-size: 13px; font-weight: 800; }
+.dashboard-categories-link:hover { text-decoration: underline; }
+.category-layout { display: grid; grid-template-columns: minmax(280px, .8fr) minmax(0, 1.2fr); align-items: start; gap: 16px; }
+.category-create-card, .category-list-card { padding: 25px; box-shadow: none; }
+.category-create-card h2 { margin-top: 14px; }.category-create-card > .expense-sub { margin: 8px 0 21px; }.category-create-card .form-actions { justify-content: stretch; }.category-create-card .button { width: 100%; }
+.category-card-icon, .category-row-icon { display: grid; place-items: center; color: var(--blue-deep); background: var(--blue-soft); }
+.category-card-icon { width: 43px; height: 43px; border-radius: 14px; }.category-row-icon { width: 31px; height: 31px; flex: 0 0 auto; border-radius: 10px; }
+.category-list-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 15px; color: var(--blue-deep); }.category-list-heading .eyebrow { margin-bottom: 4px; }
+.category-list { display: grid; gap: 8px; margin-top: 21px; }.category-row { display: flex; align-items: center; gap: 10px; min-height: 53px; padding: 10px; color: var(--ink-soft); border: 1px solid var(--line); border-radius: 14px; font-size: 14px; font-weight: 750; }.category-row > svg { margin-left: auto; color: #24a477; }.category-row.inactive { opacity: .5; }
 .budget-health { display: inline-flex; align-items: center; gap: 8px; min-height: 42px; padding: 0 14px; color: #17704e; border: 1px solid #ccefdc; border-radius: 13px; background: #effcf4; font-size: 13px; font-weight: 750; }
 .budget-health.over { color: #bd3848; border-color: #ffd6dc; background: var(--danger-soft); }
 .manager-stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
@@ -267,6 +276,7 @@ h2 { margin-bottom: 0; color: var(--ink); font-size: 21px; line-height: 1.16; le
   .budget-totals { gap: 7px; margin: 17px 0 13px; }.budget-totals > div { padding: 10px; border-radius: 11px; }.budget-totals strong { font-size: 14px; }.budget-totals span { font-size: 10px; }
   .expense-row { grid-template-columns: auto 1fr auto; gap: 8px 10px; padding: 13px; }.expense-row .expense-category-icon { grid-row: span 2; }.expense-payment { display: none; }.expense-amount { grid-column: 3; grid-row: 1; }.edit-expense { grid-column: 3; grid-row: 2; justify-self: end; width: 28px; height: 28px; }.expense-row > div:nth-child(2) { grid-column: 2; }.expense-sub { font-size: 11px; }.trip-purpose { font-size: 13px; }
   .dashboard-hero .budget-health { width: 100%; justify-content: center; }.budget-chart-card, .spending-pie-card { padding: 18px; border-radius: 19px; }.chart-heading { flex-direction: column; gap: 12px; }.budget-chart { margin-top: 22px; gap: 15px; }.chart-label { align-items: flex-start; flex-direction: column; gap: 2px; }.chart-label strong { font-size: 12px; }.manager-stat strong { font-size: 20px; }
+  .category-layout { grid-template-columns: 1fr; gap: 11px; }.category-create-card, .category-list-card { padding: 18px; border-radius: 19px; }
   .spending-pie-layout { grid-template-columns: 1fr; gap: 19px; }.donut-wrap { width: 205px; }.pie-legend-row { padding: 9px 0; }
   .mobile-nav { position: fixed; right: 12px; bottom: max(10px, env(safe-area-inset-bottom)); left: 12px; z-index: 30; display: flex; align-items: center; justify-content: space-around; min-height: 61px; padding: 6px; border: 1px solid rgba(222,232,241,.9); border-radius: 19px; background: rgba(255,255,255,.94); box-shadow: 0 12px 34px rgba(46,73,99,.18); backdrop-filter: blur(18px); }
   .mobile-nav a { display: grid; min-width: 57px; justify-items: center; gap: 2px; padding: 4px 6px; color: var(--muted); border-radius: 12px; font-size: 10px; font-weight: 700; }.mobile-nav a:first-child { color: var(--blue-deep); }

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { desc, eq, inArray } from "drizzle-orm";
-import { ArrowUpRight, CircleAlert, CircleCheck, ClipboardList, WalletCards } from "lucide-react";
+import { ArrowUpRight, CircleAlert, CircleCheck, ClipboardList, Tags, WalletCards } from "lucide-react";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { requireUser } from "@/lib/auth";
@@ -70,7 +70,7 @@ export default async function ManagerDashboardPage() {
   return (
     <AppShell userName={user.name} userRole={user.role}>
       <section className="dashboard-hero">
-        <div><span className="eyebrow">Контроль расходов</span><h1>Дашборд руководителя</h1><p className="lead">План и фактические траты по вашим командировкам.</p></div>
+        <div><span className="eyebrow">Контроль расходов</span><h1>Дашборд руководителя</h1><p className="lead">План и фактические траты по вашим командировкам.</p><Link className="dashboard-categories-link" href="/categories"><Tags size={15} />Управлять статьями расходов</Link></div>
         <div className={`budget-health ${remaining < 0 ? "over" : ""}`}>{remaining < 0 ? <CircleAlert size={18} /> : <CircleCheck size={18} />}<span>{totalPlan ? remaining < 0 ? `Превышение ${money.format(Math.abs(remaining))}` : `Остаток ${money.format(remaining)}` : "Задайте целевые бюджеты"}</span></div>
       </section>
 

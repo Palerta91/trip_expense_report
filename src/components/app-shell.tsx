@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BarChart3, Home, LogOut, PlusCircle, ReceiptText, UsersRound } from "lucide-react";
+import { BarChart3, Home, LogOut, PlusCircle, ReceiptText, Tags, UsersRound } from "lucide-react";
 import { logout } from "@/app/login/actions";
 
 type Role = "ADMIN" | "MANAGER" | "PARTICIPANT";
@@ -17,6 +17,7 @@ export function AppShell({ children, userName, userRole }: { children: React.Rea
         <nav className="desktop-nav" aria-label="Разделы приложения">
           <Link href="/"><Home size={16} />Главная</Link>
           {canSeeManagerDashboard && <Link href="/manager-dashboard"><BarChart3 size={16} />Дашборд руководителя</Link>}
+          {canManageTrips && <Link href="/categories"><Tags size={16} />Статьи расходов</Link>}
           {userRole === "ADMIN" && <Link href="/members"><UsersRound size={16} />Участники</Link>}
         </nav>
         <div className="user-menu">
