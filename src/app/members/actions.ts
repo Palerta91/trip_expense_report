@@ -12,7 +12,7 @@ const newMemberSchema = z.object({
   name: z.string().trim().min(2).max(160),
   email: z.string().trim().email().max(320),
   password: z.string().min(10).max(200),
-  role: z.enum(["MANAGER", "PARTICIPANT"])
+  role: z.enum(["ADMIN", "MANAGER", "PARTICIPANT"])
 });
 
 export async function createMember(formData: FormData) {
@@ -20,6 +20,10 @@ export async function createMember(formData: FormData) {
   if (current.role !== "ADMIN") throw new Error("Только администратор может добавлять участников");
   const parsed = newMemberSchema.safeParse({ name: formData.get("name"), email: formData.get("email"), password: formData.get("password"), role: formData.get("role") });
   if (!parsed.success) throw new Error(parsed.error.issues[0]?.message ?? "Проверьте данные участника");
+  const adminManagerEmail = process.env.ADMIN_MANAGER_EMAIL?.toLowerCase();
+  if (parsed.data.role === "ADMIN" && current.email.toLowerCase() !== adminManagerEmail) {
+    throw new Error("Создавать других администраторов может только назначенная учётная запись");
+  }
   await db.insert(users).values({ ...parsed.data, email: parsed.data.email.toLowerCase(), passwordHash: hashPassword(parsed.data.password) });
   revalidatePath("/members");
   redirect("/members");

@@ -14,6 +14,7 @@ const roleNames = { ADMIN: "Администратор", MANAGER: "Менедж�
 export default async function MembersPage() {
   const current = await requireUser();
   if (current.role !== "ADMIN") redirect("/");
+  const canManageAdmins = current.email.toLowerCase() === process.env.ADMIN_MANAGER_EMAIL?.toLowerCase();
   const memberRows = await db.select({ id: users.id, name: users.name, email: users.email, role: users.role, createdAt: users.createdAt }).from(users).orderBy(asc(users.name));
   return (
     <AppShell userName={current.name}>
@@ -22,7 +23,7 @@ export default async function MembersPage() {
         <h2 style={{ marginBottom: 20 }}>Добавить пользователя</h2>
         <form action={createMember} className="form-grid">
           <div className="field"><label htmlFor="name">Имя и фамилия</label><input id="name" name="name" required minLength={2} /></div>
-          <div className="field"><label htmlFor="role">Роль</label><select id="role" name="role" defaultValue="PARTICIPANT"><option value="PARTICIPANT">Участник</option><option value="MANAGER">Менеджер</option></select></div>
+          <div className="field"><label htmlFor="role">Роль</label><select id="role" name="role" defaultValue="PARTICIPANT"><option value="PARTICIPANT">Участник</option><option value="MANAGER">Менеджер</option>{canManageAdmins && <option value="ADMIN">Администратор</option>}</select></div>
           <div className="field"><label htmlFor="email">Email</label><input id="email" name="email" type="email" required /></div>
           <div className="field"><label htmlFor="password">Временный пароль</label><input id="password" name="password" type="password" minLength={10} required /></div>
           <div className="form-actions field full"><button className="button" type="submit">Создать пользователя</button></div>
