@@ -1,4 +1,4 @@
-import { CreateBucketCommand, HeadBucketCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { CreateBucketCommand, DeleteObjectsCommand, HeadBucketCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 
 let client: S3Client | undefined;
 let bucketReady = false;
@@ -41,4 +41,15 @@ export async function putReceipt(objectKey: string, file: File) {
     ContentType: file.type,
     ContentLength: file.size
   }));
+}
+
+export async function deleteReceiptObjects(keys: string[]) {
+  if (keys.length === 0) return;
+  const { client, bucket } = getStorage();
+  for (let offset = 0; offset < keys.length; offset += 1000) {
+    await client.send(new DeleteObjectsCommand({
+      Bucket: bucket,
+      Delete: { Objects: keys.slice(offset, offset + 1000).map((Key) => ({ Key })), Quiet: true }
+    }));
+  }
 }

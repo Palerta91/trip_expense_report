@@ -6,7 +6,8 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { expenses, tripMembers, trips } from "@/lib/db/schema";
+import { expenses, receipts, tripMembers, trips } from "@/lib/db/schema";
+import { deleteReceiptObjects } from "@/lib/storage";
 
 const tripInput = z.object({
   title: z.string().trim().min(3, "Укажите название").max(180),
@@ -114,4 +115,16 @@ export async function updateExpense(expenseId: string, formData: FormData) {
   }).where(eq(expenses.id, expenseId));
   revalidatePath(`/trips/${existing.tripId}`);
   redirect(`/trips/${existing.tripId}`);
+}
+
+export async function deleteTrip(tripId: string) {
+  const user = await requireUser();
+  if (user.role !== "ADMIN") throw new Error("Удалять командировки может только администратор");
+  const [trip] = await db.select({ id: trips.id }).from(trips).where(eq(trips.id, tripId)).limit(1);
+  if (!trip) throw new Error("Командировка не найдена");
+  const files = await db.select({ objectKey: receipts.objectKey }).from(receipts).where(eq(receipts.tripId, tripId));
+  await deleteReceiptObjects(files.map((file) => file.objectKey));
+  await db.delete(trips).where(eq(trips.id, tripId));
+  revalidatePath("/");
+  redirect("/");
 }
