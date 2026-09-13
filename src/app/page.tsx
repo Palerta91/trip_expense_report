@@ -28,7 +28,7 @@ export default async function DashboardPage() {
     <AppShell userName={user.name}>
       <div className="page-heading">
         <div><h1>Мои командировки</h1><p className="lead">Расходы, чеки и итоговые отчёты — в одном месте.</p></div>
-        {(user.role === "ADMIN" || user.role === "MANAGER") && <Link className="button" href="/trips/new"><Plus size={18} />Создать командировку</Link>}
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>{user.role === "ADMIN" && <Link className="button secondary" href="/members">Участники</Link>}{(user.role === "ADMIN" || user.role === "MANAGER") && <Link className="button" href="/trips/new"><Plus size={18} />Создать командировку</Link>}</div>
       </div>
       <section className="stat-grid" aria-label="Сводка">
         <div className="card stat"><div className="stat-label">Всего командировок</div><div className="stat-value">{tripRows.length}</div></div>
