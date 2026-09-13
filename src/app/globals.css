@@ -190,6 +190,23 @@ h2 { margin-bottom: 0; color: var(--ink); font-size: 21px; line-height: 1.16; le
 .overall-progress > div:first-child { display: flex; justify-content: space-between; margin-bottom: 9px; color: var(--muted); font-size: 12px; font-weight: 700; }
 .overall-progress strong { color: var(--ink); font-size: 13px; }
 .compact-empty { min-height: 170px; margin-top: 18px; }
+.spending-pie-card { margin-top: 17px; padding: 25px; box-shadow: none; }
+.spending-pie-card .lead { margin-top: 6px; font-size: 13px; }
+.spending-pie-layout { display: grid; grid-template-columns: minmax(210px, .7fr) minmax(260px, 1.3fr); align-items: center; gap: 36px; margin-top: 21px; }
+.donut-wrap { position: relative; display: grid; width: min(235px, 100%); aspect-ratio: 1; place-items: center; justify-self: center; }
+.donut-chart { width: 100%; height: 100%; overflow: visible; transform: rotate(-90deg); }
+.donut-track { stroke: #edf1f5; stroke-width: 5.4; }
+.donut-segment { stroke-width: 5.4; stroke-linecap: round; transition: stroke-dasharray .25s ease, stroke-dashoffset .25s ease; }
+.donut-center { position: absolute; display: grid; max-width: 76%; justify-items: center; gap: 4px; text-align: center; }
+.donut-center span { color: var(--muted); font-size: 11px; font-weight: 700; }
+.donut-center strong { color: var(--ink); font-size: 18px; letter-spacing: -.045em; }
+.pie-legend { display: grid; align-self: stretch; gap: 2px; }
+.pie-legend-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.pie-legend-row:last-child { border-bottom: 0; }
+.pie-legend-name { display: flex; align-items: center; min-width: 0; gap: 8px; overflow: hidden; color: var(--ink-soft); font-size: 13px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.pie-legend-name i { display: block; width: 9px; height: 9px; flex: 0 0 auto; border-radius: 50%; }
+.pie-legend-row strong { color: var(--ink); font-size: 13px; white-space: nowrap; }
+.pie-legend-row em { margin-left: 3px; color: var(--muted); font-size: 11px; font-style: normal; font-weight: 650; }
 .manager-trip-section { margin-top: 28px; }
 .manager-trip-row { grid-template-columns: auto 1fr auto; }
 
@@ -229,7 +246,8 @@ h2 { margin-bottom: 0; color: var(--ink); font-size: 21px; line-height: 1.16; le
   .trip-budget-summary { padding: 18px; border-radius: 19px; }.budget-summary-head { align-items: stretch; flex-direction: column; gap: 12px; }.budget-summary-head .button { width: 100%; }
   .budget-totals { gap: 7px; margin: 17px 0 13px; }.budget-totals > div { padding: 10px; border-radius: 11px; }.budget-totals strong { font-size: 14px; }.budget-totals span { font-size: 10px; }
   .expense-row { grid-template-columns: auto 1fr auto; gap: 8px 10px; padding: 13px; }.expense-row .expense-category-icon { grid-row: span 2; }.expense-payment { display: none; }.expense-amount { grid-column: 3; grid-row: 1; }.edit-expense { grid-column: 3; grid-row: 2; justify-self: end; width: 28px; height: 28px; }.expense-row > div:nth-child(2) { grid-column: 2; }.expense-sub { font-size: 11px; }.trip-purpose { font-size: 13px; }
-  .dashboard-hero .budget-health { width: 100%; justify-content: center; }.budget-chart-card { padding: 18px; border-radius: 19px; }.chart-heading { flex-direction: column; gap: 12px; }.budget-chart { margin-top: 22px; gap: 15px; }.chart-label { align-items: flex-start; flex-direction: column; gap: 2px; }.chart-label strong { font-size: 12px; }.manager-stat strong { font-size: 20px; }
+  .dashboard-hero .budget-health { width: 100%; justify-content: center; }.budget-chart-card, .spending-pie-card { padding: 18px; border-radius: 19px; }.chart-heading { flex-direction: column; gap: 12px; }.budget-chart { margin-top: 22px; gap: 15px; }.chart-label { align-items: flex-start; flex-direction: column; gap: 2px; }.chart-label strong { font-size: 12px; }.manager-stat strong { font-size: 20px; }
+  .spending-pie-layout { grid-template-columns: 1fr; gap: 19px; }.donut-wrap { width: 205px; }.pie-legend-row { padding: 9px 0; }
   .mobile-nav { position: fixed; right: 12px; bottom: max(10px, env(safe-area-inset-bottom)); left: 12px; z-index: 30; display: flex; align-items: center; justify-content: space-around; min-height: 61px; padding: 6px; border: 1px solid rgba(222,232,241,.9); border-radius: 19px; background: rgba(255,255,255,.94); box-shadow: 0 12px 34px rgba(46,73,99,.18); backdrop-filter: blur(18px); }
   .mobile-nav a { display: grid; min-width: 57px; justify-items: center; gap: 2px; padding: 4px 6px; color: var(--muted); border-radius: 12px; font-size: 10px; font-weight: 700; }.mobile-nav a:first-child { color: var(--blue-deep); }
   .mobile-nav .mobile-create { color: #fff; background: var(--blue); box-shadow: 0 5px 12px rgba(39,124,245,.23); }

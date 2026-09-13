@@ -10,6 +10,7 @@ import { categories, expenses, tripBudgets, trips } from "@/lib/db/schema";
 export const dynamic = "force-dynamic";
 
 const money = new Intl.NumberFormat("ru-RU", { style: "currency", currency: "RUB", maximumFractionDigits: 0 });
+const pieColors = ["#277cf5", "#ff9d2e", "#7d6cf2", "#32b689", "#ee6c8b", "#4eb7c5", "#7387a0"];
 
 export default async function ManagerDashboardPage() {
   const user = await requireUser();
@@ -47,6 +48,25 @@ export default async function ManagerDashboardPage() {
   for (const row of budgetRows) planByTrip.set(row.tripId, (planByTrip.get(row.tripId) ?? 0) + Number(row.amountRub));
   for (const row of expenseRows) factByTrip.set(row.tripId, (factByTrip.get(row.tripId) ?? 0) + Number(row.amountRub ?? 0));
 
+  const activeTripIds = new Set(tripRows.filter((trip) => trip.status === "OPEN" || trip.status === "DRAFT").map((trip) => trip.id));
+  const currentSpending = new Map<string, { name: string; amountRub: number }>();
+  for (const row of expenseRows) {
+    if (!activeTripIds.has(row.tripId)) continue;
+    const categoryId = row.categoryId ?? "__uncategorized";
+    const current = currentSpending.get(categoryId) ?? { name: row.categoryName ?? "Без категории", amountRub: 0 };
+    current.amountRub += Number(row.amountRub ?? 0);
+    currentSpending.set(categoryId, current);
+  }
+  const currentSpendLines = [...currentSpending.entries()].map(([id, line]) => ({ id, ...line })).filter((line) => line.amountRub > 0).sort((a, b) => b.amountRub - a.amountRub);
+  const currentSpendTotal = currentSpendLines.reduce((sum, line) => sum + line.amountRub, 0);
+  let pieOffset = 0;
+  const pieSegments = currentSpendLines.map((line, index) => {
+    const percent = (line.amountRub / currentSpendTotal) * 100;
+    const segment = { ...line, color: pieColors[index % pieColors.length], percent, offset: pieOffset };
+    pieOffset += percent;
+    return segment;
+  });
+
   return (
     <AppShell userName={user.name} userRole={user.role}>
       <section className="dashboard-hero">
@@ -69,6 +89,22 @@ export default async function ManagerDashboardPage() {
           </div>)}
         </div>}
         {totalPlan > 0 && <div className="overall-progress"><div><span>Освоение бюджета</span><strong>{Math.round((totalFact / totalPlan) * 100)}%</strong></div><div className="progress-track"><span className={totalFact > totalPlan ? "over" : ""} style={{ width: `${factPercent}%` }} /></div></div>}
+      </section>
+
+      <section className="card spending-pie-card" aria-labelledby="spending-pie-heading">
+        <div className="chart-heading"><div><span className="eyebrow">Текущие расходы</span><h2 id="spending-pie-heading">Расходы по статьям</h2><p className="lead">Открытые и черновые командировки.</p></div></div>
+        {pieSegments.length === 0 ? <div className="empty compact-empty"><p>В текущих командировках ещё нет расходов.</p><p className="expense-sub">Диаграмма появится после добавления первой статьи расхода.</p></div> : <div className="spending-pie-layout">
+          <div className="donut-wrap" role="img" aria-label={`Текущие расходы: ${money.format(currentSpendTotal)}`}>
+            <svg className="donut-chart" viewBox="0 0 42 42" aria-hidden="true">
+              <circle className="donut-track" cx="21" cy="21" r="15.9155" fill="none" />
+              {pieSegments.map((segment) => <circle key={segment.id} cx="21" cy="21" r="15.9155" fill="none" pathLength="100" stroke={segment.color} strokeDasharray={`${segment.percent} ${100 - segment.percent}`} strokeDashoffset={-segment.offset} className="donut-segment" />)}
+            </svg>
+            <div className="donut-center"><span>Всего</span><strong>{money.format(currentSpendTotal)}</strong></div>
+          </div>
+          <div className="pie-legend">
+            {pieSegments.map((segment) => <div className="pie-legend-row" key={segment.id}><span className="pie-legend-name"><i style={{ background: segment.color }} />{segment.name}</span><strong>{money.format(segment.amountRub)} <em>{Math.round(segment.percent)}%</em></strong></div>)}
+          </div>
+        </div>}
       </section>
 
       <section className="trips-section manager-trip-section">
