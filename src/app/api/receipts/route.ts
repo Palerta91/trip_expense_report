@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getSessionUser } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { recognitionJobs, receipts, tripMembers } from "@/lib/db/schema";
+import { expenses, recognitionJobs, receipts, tripMembers } from "@/lib/db/schema";
 import { putReceipt } from "@/lib/storage";
 
 export const runtime = "nodejs";
@@ -33,20 +33,34 @@ export async function POST(request: Request) {
   await putReceipt(objectKey, file);
 
   const recognitionEnabled = process.env.ENABLE_MINIMAX_RECOGNITION === "true" && Boolean(process.env.MINIMAX_API_KEY);
-  const [receipt] = await db.insert(receipts).values({
-    tripId: parsed.data.tripId,
-    uploadedBy: user.id,
-    objectKey,
-    originalName: file.name.slice(0, 255),
-    mimeType: file.type,
-    byteSize: file.size,
-    status: recognitionEnabled ? "UPLOADED" : "READY_FOR_REVIEW"
-  }).returning({ id: receipts.id });
-
-  if (recognitionEnabled) await db.insert(recognitionJobs).values({ receiptId: receipt.id });
+  const [receipt] = await db.transaction(async (tx) => {
+    const [created] = await tx.insert(receipts).values({
+      tripId: parsed.data.tripId,
+      uploadedBy: user.id,
+      objectKey,
+      originalName: file.name.slice(0, 255),
+      mimeType: file.type,
+      byteSize: file.size,
+      status: recognitionEnabled ? "UPLOADED" : "READY_FOR_REVIEW"
+    }).returning({ id: receipts.id });
+    await tx.insert(expenses).values({
+      tripId: parsed.data.tripId,
+      claimantId: user.id,
+      receiptId: created.id,
+      source: "RECEIPT",
+      expenseDate: new Date().toISOString().slice(0, 10),
+      merchant: "Ожидается распознавание",
+      amount: "0.00",
+      currency: "RUB",
+      exchangeRate: "1.000000",
+      amountRub: "0.00"
+    });
+    if (recognitionEnabled) await tx.insert(recognitionJobs).values({ receiptId: created.id });
+    return [created];
+  });
 
   return NextResponse.json({
     receiptId: receipt.id,
-    message: recognitionEnabled ? "Чек загружен: распознавание выполняется в фоне. Черновик расхода появится в командировке." : "Чек загружен. Распознавание выключено — добавьте расход вручную."
+    message: recognitionEnabled ? "Чек загружен. Распознаём данные — форма появится ниже." : "Чек загружен. Заполните поля расхода ниже вручную."
   }, { status: 201 });
 }

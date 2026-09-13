@@ -103,6 +103,7 @@ export const expenses = pgTable("expenses", {
   status: expenseStatus("status").notNull().default("DRAFT"),
   expenseDate: date("expense_date").notNull(),
   merchant: varchar("merchant", { length: 180 }).notNull(),
+  merchantOriginal: varchar("merchant_original", { length: 180 }),
   description: text("description"),
   amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
   currency: varchar("currency", { length: 3 }).notNull().default("RUB"),

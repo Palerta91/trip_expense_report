@@ -120,6 +120,25 @@ h2 { margin-bottom: 0; color: var(--ink); font-size: 21px; line-height: 1.16; le
 .money-input span { padding: 0 10px; color: var(--muted); font-size: 12px; font-weight: 800; }
 .budget-fact { color: var(--muted); font-size: 11px; font-weight: 650; }
 .budget-fact.over { color: var(--danger); }
+.receipt-upload-form { margin-bottom: 16px; }
+.receipt-result { display: grid; grid-template-columns: minmax(250px, .72fr) minmax(0, 1.28fr); align-items: start; gap: 16px; }
+.receipt-preview { position: sticky; top: 92px; display: grid; min-height: 280px; overflow: hidden; place-items: center; padding: 10px; box-shadow: none; background: #f8fbfd; }
+.receipt-preview img { display: block; width: 100%; max-height: min(65vh, 620px); object-fit: contain; border-radius: 15px; }
+.file-preview { display: grid; max-width: 220px; justify-items: center; gap: 10px; color: var(--ink-soft); text-align: center; font-size: 13px; font-weight: 700; line-height: 1.4; }
+.file-preview svg { color: var(--blue-deep); }.file-preview a { color: var(--blue-deep); font-size: 12px; }
+.receipt-result-content { min-width: 0; }
+.receipt-processing { display: flex; align-items: center; gap: 13px; min-height: 128px; padding: 23px; color: var(--blue-deep); box-shadow: none; }
+.receipt-processing strong { display: block; color: var(--ink); font-size: 14px; }.receipt-processing p { margin: 5px 0 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
+.recognition-form { padding: 24px; box-shadow: none; }
+.recognition-form-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 15px; margin-bottom: 20px; }
+.recognition-form-heading .eyebrow { margin-bottom: 4px; }.recognition-form-heading .expense-sub { margin: 5px 0 0; }
+.recognition-status { display: inline-flex; align-items: center; gap: 5px; flex: 0 0 auto; min-height: 27px; padding: 0 9px; border-radius: 999px; font-size: 11px; font-weight: 800; }
+.recognition-status.ready { color: #17704e; background: #ddf7eb; }.recognition-status.failed { color: #b3414c; background: var(--danger-soft); }
+.recognition-grid { gap: 15px; }
+.rate-input { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 7px; }
+.rate-button { min-width: 55px; min-height: 45px; padding: 0 10px; border-radius: 12px; font-size: 12px; }.rate-button span { display: inline; }
+.inline-message { display: flex; align-items: flex-start; gap: 8px; margin: 16px 0 0; padding: 11px 12px; border: 1px solid; border-radius: 12px; font-size: 12px; line-height: 1.45; }
+.inline-message.success { color: #17704e; border-color: #bde8d2; background: #effcf4; }.inline-message.error, .error-callout { color: #a93745; border-color: #ffd4da; background: var(--danger-soft); }
 
 .trip-hero { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; padding: 29px; background: linear-gradient(115deg, #fff 55%, #eff7ff); }
 .trip-hero-copy h1 { margin-top: 12px; font-size: clamp(28px, 4vw, 39px); }
@@ -241,6 +260,7 @@ h2 { margin-bottom: 0; color: var(--ink); font-size: 21px; line-height: 1.16; le
   .field.full { grid-column: auto; }.form-actions { justify-content: stretch; flex-direction: column-reverse; }.form-actions .button { width: 100%; }
   .budget-editor { margin-top: 20px; padding: 16px; border-radius: 16px; }.budget-editor-heading { flex-direction: column; gap: 6px; }.budget-editor-heading .expense-sub { max-width: none; text-align: left; }
   .budget-field-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }.budget-field { padding: 9px; }
+  .receipt-result { grid-template-columns: 1fr; gap: 11px; }.receipt-preview { position: static; min-height: 180px; max-height: 360px; padding: 8px; border-radius: 19px; }.receipt-preview img { max-height: 340px; }.receipt-processing, .recognition-form { padding: 18px; border-radius: 19px; }.recognition-form-heading { flex-direction: column; gap: 10px; }.rate-button span { display: none; }
   .trip-hero { padding: 20px; border-radius: 20px; background: linear-gradient(140deg, #fff 55%, #edf6ff); }.trip-hero-copy h1 { font-size: 31px; }.trip-actions { max-width: none; width: 100%; justify-content: flex-start; }.trip-actions .button { flex: 1; }.trip-actions .button span { display: none; }
   .trip-workbench { grid-template-columns: 1fr; gap: 9px; margin: 12px 0; }.workbench-action { min-height: 69px; border-radius: 16px; }
   .trip-budget-summary { padding: 18px; border-radius: 19px; }.budget-summary-head { align-items: stretch; flex-direction: column; gap: 12px; }.budget-summary-head .button { width: 100%; }

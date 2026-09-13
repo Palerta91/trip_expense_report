@@ -1,0 +1,1 @@
+ALTER TABLE "expenses" ADD COLUMN "merchant_original" varchar(180);

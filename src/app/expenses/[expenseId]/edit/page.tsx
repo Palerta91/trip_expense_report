@@ -24,6 +24,7 @@ export default async function EditExpensePage({ params }: { params: Promise<{ ex
         <div className="form-grid">
           <div className="field"><label htmlFor="expenseDate">Дата расхода</label><input id="expenseDate" name="expenseDate" type="date" required defaultValue={expense.expenseDate} /></div>
           <div className="field"><label htmlFor="categoryId">Категория</label><select id="categoryId" name="categoryId" defaultValue={expense.categoryId ?? ""}><option value="">Не выбрана</option>{categoryRows.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></div>
+          <div className="field full"><label htmlFor="merchantOriginal">Название / получатель на языке чека</label><input id="merchantOriginal" name="merchantOriginal" defaultValue={expense.merchantOriginal ?? ""} placeholder="Например, название на китайском" /></div>
           <div className="field full"><label htmlFor="merchant">Продавец / поставщик</label><input id="merchant" name="merchant" required defaultValue={expense.merchant} /></div>
           <div className="field"><label htmlFor="amount">Сумма</label><input id="amount" name="amount" type="number" min="0.01" step="0.01" required defaultValue={expense.amount} /></div>
           <div className="field"><label htmlFor="currency">Валюта</label><input id="currency" name="currency" maxLength={3} required defaultValue={expense.currency} /></div>

@@ -2,13 +2,14 @@ import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { and, asc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { expenses, recognitionJobs, receipts } from "@/lib/db/schema";
+import { categories, expenses, recognitionJobs, receipts } from "@/lib/db/schema";
 import { getStorage } from "@/lib/storage";
 
 const extractedSchema = z.object({
-  merchant: z.string().min(1).max(180).catch("Не определено"),
+  merchantOriginal: z.string().trim().max(180).optional().catch(undefined),
+  merchantRussian: z.string().trim().max(180).optional().catch(undefined),
   expenseDate: z.string().date().catch(new Date().toISOString().slice(0, 10)),
-  amount: z.coerce.number().positive(),
+  amount: z.coerce.number().nonnegative().catch(0),
   currency: z.string().length(3).transform((value) => value.toUpperCase()).catch("RUB"),
   category: z.string().max(100).optional(),
   paymentMethod: z.string().max(80).optional(),
@@ -42,7 +43,7 @@ async function recognize(file: Buffer, mimeType: string) {
       model,
       temperature: 0,
       messages: [
-        { role: "system", content: "Извлеки данные из кассового чека. Верни только JSON: merchant, expenseDate (YYYY-MM-DD), amount (number), currency (ISO 4217), category, paymentMethod, comment. Если поле не видно, не выдумывай." },
+        { role: "system", content: "Извлеки данные из чека или подтверждения оплаты. Верни только JSON: merchantOriginal, merchantRussian, expenseDate (YYYY-MM-DD), amount (number), currency (ISO 4217), category, paymentMethod, comment. Для китайского чека merchantOriginal — точное название или имя получателя на китайском, merchantRussian — его перевод на русский. Для русского чека merchantRussian — название как в чеке, merchantOriginal можно не передавать. category выбери из типовых: Проживание, Проезд, Питание, Такси, Связь, Прочее. Если поле не видно, верни пустую строку, не выдумывай. Сумму возвращай числом без разделителей." },
         { role: "user", content: [{ type: "text", text: "Распознай этот чек." }, { type: "image_url", image_url: { url: image } }] }
       ]
     })
@@ -51,6 +52,17 @@ async function recognize(file: Buffer, mimeType: string) {
   const answer = await response.json() as { choices?: Array<{ message?: { content?: unknown } }> };
   const raw = contentToText(answer.choices?.[0]?.message?.content).replace(/^```json\s*|\s*```$/g, "");
   return extractedSchema.parse(JSON.parse(raw));
+}
+
+function normalize(value: string) {
+  return value.trim().toLocaleLowerCase("ru-RU").replace(/ё/g, "е");
+}
+
+async function resolveCategoryId(name: string | undefined) {
+  if (!name?.trim()) return undefined;
+  const rows = await db.select({ id: categories.id, name: categories.name }).from(categories).where(eq(categories.active, true));
+  const target = normalize(name);
+  return rows.find((row) => normalize(row.name) === target || normalize(row.name).includes(target) || target.includes(normalize(row.name)))?.id;
 }
 
 async function processOne() {
@@ -63,22 +75,29 @@ async function processOne() {
   try {
     await db.update(receipts).set({ status: "PROCESSING", errorMessage: null }).where(eq(receipts.id, receipt.id));
     const extracted = await recognize(await getBuffer(receipt.objectKey), receipt.mimeType);
+    const categoryId = await resolveCategoryId(extracted.category);
     const rate = extracted.currency === "RUB" ? 1 : undefined;
+    const merchant = extracted.merchantRussian || extracted.merchantOriginal || "Не определено";
     await db.transaction(async (tx) => {
-      await tx.insert(expenses).values({
+      const values = {
         tripId: receipt.tripId,
         claimantId: receipt.uploadedBy,
         receiptId: receipt.id,
-        source: "RECEIPT",
+        source: "RECEIPT" as const,
         expenseDate: extracted.expenseDate,
-        merchant: extracted.merchant,
+        merchant,
+        merchantOriginal: extracted.merchantOriginal || null,
+        categoryId,
         description: extracted.comment,
         amount: extracted.amount.toFixed(2),
         currency: extracted.currency,
         exchangeRate: rate?.toFixed(6),
         amountRub: rate ? extracted.amount.toFixed(2) : null,
         paymentMethod: extracted.paymentMethod
-      });
+      };
+      const [existingExpense] = await tx.select({ id: expenses.id }).from(expenses).where(eq(expenses.receiptId, receipt.id)).limit(1);
+      if (existingExpense) await tx.update(expenses).set({ ...values, updatedAt: new Date() }).where(eq(expenses.id, existingExpense.id));
+      else await tx.insert(expenses).values(values);
       await tx.update(receipts).set({ status: "READY_FOR_REVIEW", extracted }).where(eq(receipts.id, receipt.id));
       await tx.update(recognitionJobs).set({ status: "DONE", processedAt: new Date(), errorMessage: null }).where(eq(recognitionJobs.id, job.id));
     });
