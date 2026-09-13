@@ -17,7 +17,7 @@ export default async function MembersPage() {
   const canManageAdmins = current.email.toLowerCase() === process.env.ADMIN_MANAGER_EMAIL?.toLowerCase();
   const memberRows = await db.select({ id: users.id, name: users.name, email: users.email, role: users.role, createdAt: users.createdAt }).from(users).orderBy(asc(users.name));
   return (
-    <AppShell userName={current.name}>
+    <AppShell userName={current.name} userRole={current.role}>
       <div className="page-heading"><div><h1>Участники</h1><p className="lead">Учётные записи и роли пользователей системы.</p></div><Link href="/" className="button secondary">К командировкам</Link></div>
       <section className="card form-card" style={{ marginBottom: 28 }}>
         <h2 style={{ marginBottom: 20 }}>Добавить пользователя</h2>

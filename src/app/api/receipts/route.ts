@@ -23,8 +23,10 @@ export async function POST(request: Request) {
   if (!allowedTypes.has(file.type)) return NextResponse.json({ message: "Поддерживаются JPG, PNG, WEBP и PDF" }, { status: 400 });
   if (file.size === 0 || file.size > maxSize) return NextResponse.json({ message: "Размер файла должен быть не более 10 МБ" }, { status: 400 });
 
-  const [member] = await db.select({ tripId: tripMembers.tripId }).from(tripMembers).where(and(eq(tripMembers.tripId, parsed.data.tripId), eq(tripMembers.userId, user.id))).limit(1);
-  if (!member) return NextResponse.json({ message: "Нет доступа к этой командировке" }, { status: 403 });
+  if (user.role !== "ADMIN") {
+    const [member] = await db.select({ tripId: tripMembers.tripId }).from(tripMembers).where(and(eq(tripMembers.tripId, parsed.data.tripId), eq(tripMembers.userId, user.id))).limit(1);
+    if (!member) return NextResponse.json({ message: "Нет доступа к этой командировке" }, { status: 403 });
+  }
 
   const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-120) || "receipt";
   const objectKey = `receipts/${parsed.data.tripId}/${randomUUID()}-${safeName}`;

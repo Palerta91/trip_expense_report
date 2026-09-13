@@ -12,13 +12,15 @@ export const dynamic = "force-dynamic";
 export default async function NewExpensePage({ params }: { params: Promise<{ tripId: string }> }) {
   const { tripId } = await params;
   const user = await requireUser();
-  const [trip] = await db.select({ id: trips.id, title: trips.title }).from(tripMembers).innerJoin(trips, eq(tripMembers.tripId, trips.id)).where(and(eq(tripMembers.tripId, tripId), eq(tripMembers.userId, user.id))).limit(1);
+  const [trip] = user.role === "ADMIN"
+    ? await db.select({ id: trips.id, title: trips.title }).from(trips).where(eq(trips.id, tripId)).limit(1)
+    : await db.select({ id: trips.id, title: trips.title }).from(tripMembers).innerJoin(trips, eq(tripMembers.tripId, trips.id)).where(and(eq(tripMembers.tripId, tripId), eq(tripMembers.userId, user.id))).limit(1);
   if (!trip) notFound();
   const categoryRows = await db.select().from(categories).where(eq(categories.active, true)).orderBy(asc(categories.name));
   const action = createManualExpense.bind(null, tripId);
 
   return (
-    <AppShell userName={user.name}>
+    <AppShell userName={user.name} userRole={user.role}>
       <div className="page-heading"><div><h1>Добавить расход</h1><p className="lead">{trip.title} · ручной ввод без чека и распознавания.</p></div></div>
       <form className="card form-card" action={action}>
         <div className="form-grid">

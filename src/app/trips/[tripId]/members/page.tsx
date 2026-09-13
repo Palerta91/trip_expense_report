@@ -19,7 +19,7 @@ export default async function TripMembersPage({ params }: { params: Promise<{ tr
   const candidates = memberIds.length ? await db.select({ id: users.id, name: users.name, email: users.email }).from(users).where(notInArray(users.id, memberIds)).orderBy(asc(users.name)) : await db.select({ id: users.id, name: users.name, email: users.email }).from(users).orderBy(asc(users.name));
   const action = addTripMember.bind(null, tripId);
   return (
-    <AppShell userName={current.name}>
+    <AppShell userName={current.name} userRole={current.role}>
       <div className="page-heading"><div><h1>Участники командировки</h1><p className="lead">{trip.title}</p></div><Link href={`/trips/${tripId}`} className="button secondary">К расходам</Link></div>
       <section className="card form-card" style={{ marginBottom: 28 }}>
         <h2 style={{ marginBottom: 20 }}>Добавить участника</h2>

@@ -18,7 +18,7 @@ export default async function EditExpensePage({ params }: { params: Promise<{ ex
   const action = updateExpense.bind(null, expenseId);
   const expense = result.expense;
   return (
-    <AppShell userName={user.name}>
+    <AppShell userName={user.name} userRole={user.role}>
       <div className="page-heading"><div><h1>Проверить расход</h1><p className="lead">{result.tripTitle} · данные из чека всегда нужно подтвердить вручную.</p></div></div>
       <form className="card form-card" action={action}>
         <div className="form-grid">

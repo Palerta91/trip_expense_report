@@ -53,6 +53,7 @@ export const trips = pgTable("trips", {
   purpose: text("purpose"),
   status: tripStatus("status").notNull().default("DRAFT"),
   managerId: uuid("manager_id").notNull().references(() => users.id),
+  budgetEditorId: uuid("budget_editor_id").references(() => users.id),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
 });
 
@@ -64,6 +65,18 @@ export const tripMembers = pgTable(
     joinedAt: timestamp("joined_at", { withTimezone: true }).notNull().defaultNow()
   },
   (table) => [primaryKey({ columns: [table.tripId, table.userId] })]
+);
+
+export const tripBudgets = pgTable(
+  "trip_budgets",
+  {
+    tripId: uuid("trip_id").notNull().references(() => trips.id, { onDelete: "cascade" }),
+    categoryId: uuid("category_id").notNull().references(() => categories.id),
+    amountRub: numeric("amount_rub", { precision: 12, scale: 2 }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [primaryKey({ columns: [table.tripId, table.categoryId] })]
 );
 
 export const receipts = pgTable("receipts", {

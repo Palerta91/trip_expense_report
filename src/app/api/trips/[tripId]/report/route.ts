@@ -11,8 +11,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ trip
   const { tripId } = await params;
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ message: "Требуется вход" }, { status: 401 });
-  const [membership] = await db.select({ tripId: tripMembers.tripId }).from(tripMembers).where(and(eq(tripMembers.tripId, tripId), eq(tripMembers.userId, user.id))).limit(1);
-  if (!membership) return NextResponse.json({ message: "Нет доступа к этой командировке" }, { status: 403 });
+  if (user.role !== "ADMIN") {
+    const [membership] = await db.select({ tripId: tripMembers.tripId }).from(tripMembers).where(and(eq(tripMembers.tripId, tripId), eq(tripMembers.userId, user.id))).limit(1);
+    if (!membership) return NextResponse.json({ message: "Нет доступа к этой командировке" }, { status: 403 });
+  }
   const format = new URL(request.url).searchParams.get("format");
   if (format === "xlsx") {
     const file = await createXlsxReport(tripId);
