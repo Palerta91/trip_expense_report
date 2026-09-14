@@ -129,6 +129,7 @@ h2 { margin-bottom: 0; color: var(--ink); font-size: 21px; line-height: 1.16; le
 .receipt-result-content { min-width: 0; }
 .receipt-processing { display: flex; align-items: center; gap: 13px; min-height: 128px; padding: 23px; color: var(--blue-deep); box-shadow: none; }
 .receipt-processing strong { display: block; color: var(--ink); font-size: 14px; }.receipt-processing p { margin: 5px 0 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
+.recognition-actions { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 11px; }.recognition-actions .text-button { color: var(--blue-deep); background: var(--blue-soft); }.recognition-actions .text-button:disabled { color: var(--muted); background: transparent; }.recognition-retry { margin-top: 13px; }
 .recognition-form { padding: 24px; box-shadow: none; }
 .recognition-form-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 15px; margin-bottom: 20px; }
 .recognition-form-heading .eyebrow { margin-bottom: 4px; }.recognition-form-heading .expense-sub { margin: 5px 0 0; }

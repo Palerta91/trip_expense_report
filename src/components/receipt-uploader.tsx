@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { CheckCircle2, CircleAlert, LoaderCircle, RefreshCw, Save, ScanLine, UploadCloud } from "lucide-react";
+import { CheckCircle2, CircleAlert, LoaderCircle, RefreshCw, RotateCcw, Save, ScanLine, SquarePen, UploadCloud } from "lucide-react";
 
 type Category = { id: string; name: string };
 type ReceiptStatus = "UPLOADED" | "PROCESSING" | "READY_FOR_REVIEW" | "FAILED";
 type Receipt = { id: string; originalName: string; mimeType: string; status: ReceiptStatus; errorMessage: string | null };
+type Recognition = { status: "PENDING" | "PROCESSING" | "DONE" | "FAILED"; startedAt: string; canCancel: boolean; canRestart: boolean; restartAt: string | null };
 type Expense = { id: string; title: string | null; merchant: string; merchantOriginal: string | null; expenseDate: string; categoryId: string | null; amount: string; currency: string; exchangeRate: string | null; amountRub: string | null; paymentMethod: string | null; description: string | null };
 type Draft = { title: string; merchantOriginal: string; merchant: string; expenseDate: string; categoryId: string; amount: string; currency: string; exchangeRate: string; paymentMethod: string; description: string };
 
@@ -44,6 +45,7 @@ export function ReceiptUploader({ tripId, categories, initialReceiptId, mode = "
   const [uploadMessage, setUploadMessage] = useState<string | null>(null);
   const [receiptId, setReceiptId] = useState<string | null>(initialReceiptId ?? null);
   const [receipt, setReceipt] = useState<Receipt | null>(null);
+  const [recognition, setRecognition] = useState<Recognition | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [canEdit, setCanEdit] = useState(false);
   const [pending, setPending] = useState(false);
@@ -51,6 +53,8 @@ export function ReceiptUploader({ tripId, categories, initialReceiptId, mode = "
   const [rateMessage, setRateMessage] = useState<{ kind: "success" | "error"; text: string } | null>(null);
   const [saveMessage, setSaveMessage] = useState<{ kind: "success" | "error"; text: string } | null>(null);
   const [saving, setSaving] = useState(false);
+  const [recognitionPending, setRecognitionPending] = useState<"cancel" | "restart" | null>(null);
+  const [refreshVersion, setRefreshVersion] = useState(0);
 
   useEffect(() => {
     if (!receiptId) return;
@@ -59,10 +63,11 @@ export function ReceiptUploader({ tripId, categories, initialReceiptId, mode = "
     async function loadResult() {
       try {
         const response = await fetch(`/api/receipts/${receiptId}`, { cache: "no-store" });
-        const result = await response.json() as { receipt?: Receipt; expense?: Expense | null; canEdit?: boolean; message?: string };
+        const result = await response.json() as { receipt?: Receipt; expense?: Expense | null; recognition?: Recognition | null; canEdit?: boolean; message?: string };
         if (!response.ok) throw new Error(result.message ?? "Не удалось получить результат обработки");
         if (disposed || !result.receipt) return;
         setReceipt(result.receipt);
+        setRecognition(result.recognition ?? null);
         setCanEdit(Boolean(result.canEdit));
         if (result.expense) setDraft(toDraft(result.expense));
         if (result.receipt.status === "UPLOADED" || result.receipt.status === "PROCESSING") timer = setTimeout(loadResult, 1500);
@@ -72,7 +77,7 @@ export function ReceiptUploader({ tripId, categories, initialReceiptId, mode = "
     }
     void loadResult();
     return () => { disposed = true; if (timer) clearTimeout(timer); };
-  }, [receiptId]);
+  }, [receiptId, refreshVersion]);
 
   const amountRub = useMemo(() => {
     if (!draft) return null;
@@ -152,6 +157,42 @@ export function ReceiptUploader({ tripId, categories, initialReceiptId, mode = "
     }
   }
 
+  async function cancelRecognition() {
+    if (!receiptId) return;
+    setRecognitionPending("cancel");
+    try {
+      const response = await fetch(`/api/receipts/${receiptId}/recognition`, { method: "DELETE" });
+      const result = await response.json() as { message?: string };
+      if (!response.ok) throw new Error(result.message ?? "Не удалось остановить распознавание");
+      setReceipt((previous) => previous ? { ...previous, status: "READY_FOR_REVIEW", errorMessage: null } : previous);
+      setRecognition((previous) => previous ? { ...previous, status: "FAILED", canCancel: false, canRestart: false } : previous);
+      setSaveMessage({ kind: "success", text: result.message ?? "Распознавание остановлено. Заполните расход вручную." });
+      setRefreshVersion((value) => value + 1);
+    } catch (error) {
+      setSaveMessage({ kind: "error", text: error instanceof Error ? error.message : "Не удалось остановить распознавание" });
+    } finally {
+      setRecognitionPending(null);
+    }
+  }
+
+  async function restartRecognition() {
+    if (!receiptId) return;
+    setRecognitionPending("restart");
+    try {
+      const response = await fetch(`/api/receipts/${receiptId}/recognition`, { method: "POST" });
+      const result = await response.json() as { message?: string };
+      if (!response.ok) throw new Error(result.message ?? "Не удалось перезапустить распознавание");
+      setReceipt((previous) => previous ? { ...previous, status: "UPLOADED", errorMessage: null } : previous);
+      setRecognition((previous) => previous ? { ...previous, status: "PENDING", canCancel: true, canRestart: false, startedAt: new Date().toISOString() } : previous);
+      setSaveMessage(null);
+      setRefreshVersion((value) => value + 1);
+    } catch (error) {
+      setSaveMessage({ kind: "error", text: error instanceof Error ? error.message : "Не удалось перезапустить распознавание" });
+    } finally {
+      setRecognitionPending(null);
+    }
+  }
+
   const processingMessage = receipt ? messageForStatus(receipt.status) : null;
   const previewUrl = receiptId ? `/api/receipts/${receiptId}/file` : null;
   const isImage = receipt?.mimeType.startsWith("image/") ?? file?.type.startsWith("image/") ?? false;
@@ -168,9 +209,10 @@ export function ReceiptUploader({ tripId, categories, initialReceiptId, mode = "
     {receipt && <section className="receipt-result" aria-live="polite">
       <div className="receipt-preview card">{isImage && previewUrl ? <img src={previewUrl} alt={`Превью: ${receipt.originalName}`} /> : <div className="file-preview"><ScanLine size={28} /><span>{receipt.originalName}</span><a href={previewUrl ?? "#"} target="_blank">Открыть файл</a></div>}</div>
       <div className="receipt-result-content">
-        {processingMessage ? <div className="card receipt-processing"><LoaderCircle size={21} className="spin" /><div><strong>{processingMessage}</strong><p>Поля расхода появятся автоматически. Можно не закрывать страницу.</p></div></div> : draft && <form className="card recognition-form" onSubmit={saveExpense}>
+        {processingMessage ? <div className="card receipt-processing"><LoaderCircle size={21} className="spin" /><div><strong>{processingMessage}</strong><p>Поля расхода появятся автоматически. Можно не закрывать страницу.</p>{canEdit && recognition && <div className="recognition-actions"><button className="text-button" type="button" onClick={cancelRecognition} disabled={!recognition.canCancel || recognitionPending !== null}>{recognitionPending === "cancel" ? <LoaderCircle size={15} className="spin" /> : <SquarePen size={15} />}Заполнить вручную</button>{recognition.canRestart && <button className="text-button" type="button" onClick={restartRecognition} disabled={recognitionPending !== null}>{recognitionPending === "restart" ? <LoaderCircle size={15} className="spin" /> : <RotateCcw size={15} />}Перезапустить распознавание</button>}</div>}</div></div> : draft && <form className="card recognition-form" onSubmit={saveExpense}>
           <div className="recognition-form-heading"><div><span className="eyebrow">{isManual ? "Ручной ввод" : "Результат обработки"}</span><h2>{isManual ? "Заполните расход" : "Проверьте расход"}</h2><p className="expense-sub">Данные можно исправить перед сохранением.</p></div>{receipt.status === "FAILED" && <span className="recognition-status failed"><CircleAlert size={15} />Распознавание не завершилось</span>}{receipt.status === "READY_FOR_REVIEW" && <span className="recognition-status ready"><CheckCircle2 size={15} />{isManual ? "Чек сохранён" : "Готово к проверке"}</span>}</div>
           {receipt.status === "FAILED" && <p className="callout error-callout">{receipt.errorMessage ? `Не удалось извлечь все данные: ${receipt.errorMessage}` : "Не удалось извлечь все данные. Заполните форму вручную."}</p>}
+          {receipt.status === "FAILED" && recognition?.canRestart && <div className="form-actions recognition-retry"><button className="button secondary" type="button" onClick={restartRecognition} disabled={recognitionPending !== null}>{recognitionPending === "restart" ? <><LoaderCircle size={17} className="spin" />Запускаем…</> : <><RotateCcw size={17} />Перезапустить распознавание</>}</button></div>}
           <div className="form-grid recognition-grid">
             <div className="field full"><label htmlFor="title">Название</label><input id="title" value={draft.title} onChange={(event) => change("title", event.target.value)} placeholder="Для билета маршрут появится автоматически" maxLength={180} disabled={!canEdit} /></div>
             <div className="field"><label htmlFor="merchantOriginal">Название / получатель на языке чека</label><input id="merchantOriginal" value={draft.merchantOriginal} onChange={(event) => change("merchantOriginal", event.target.value)} placeholder="Например, 支付宝" disabled={!canEdit} /></div>

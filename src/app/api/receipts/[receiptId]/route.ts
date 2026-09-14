@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getSessionUser } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { expenses, receipts, tripMembers } from "@/lib/db/schema";
+import { expenses, recognitionJobs, receipts, tripMembers } from "@/lib/db/schema";
 import { deleteReceiptObjects } from "@/lib/storage";
 
 export const runtime = "nodejs";
@@ -39,7 +39,13 @@ export async function GET(_: Request, { params }: { params: Promise<{ receiptId:
   if (!parsedId.success) return NextResponse.json({ message: "Некорректный идентификатор чека" }, { status: 400 });
   const result = await getAccessibleReceipt(parsedId.data);
   if ("response" in result) return result.response;
-  const [expense] = await db.select().from(expenses).where(eq(expenses.receiptId, result.receipt.id)).limit(1);
+  const [[expense], [job]] = await Promise.all([
+    db.select().from(expenses).where(eq(expenses.receiptId, result.receipt.id)).limit(1),
+    db.select().from(recognitionJobs).where(eq(recognitionJobs.receiptId, result.receipt.id)).limit(1)
+  ]);
+  const canEdit = result.user.role === "ADMIN" || result.receipt.uploadedBy === result.user.id;
+  const restartAt = job ? new Date(job.createdAt.getTime() + 60_000) : null;
+  const canRestart = Boolean(canEdit && job && expense?.source === "RECEIPT" && result.receipt.status !== "READY_FOR_REVIEW" && restartAt && restartAt.getTime() <= Date.now());
   return NextResponse.json({
     receipt: {
       id: result.receipt.id,
@@ -49,7 +55,14 @@ export async function GET(_: Request, { params }: { params: Promise<{ receiptId:
       errorMessage: result.receipt.errorMessage
     },
     expense: expense ?? null,
-    canEdit: result.user.role === "ADMIN" || result.receipt.uploadedBy === result.user.id
+    canEdit,
+    recognition: job && expense?.source === "RECEIPT" ? {
+      status: job.status,
+      startedAt: job.createdAt.toISOString(),
+      canCancel: canEdit && (job.status === "PENDING" || job.status === "PROCESSING"),
+      canRestart,
+      restartAt: restartAt?.toISOString() ?? null
+    } : null
   });
 }
 
@@ -77,6 +90,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ rece
   const [expense] = await db.select({ id: expenses.id }).from(expenses).where(eq(expenses.receiptId, result.receipt.id)).limit(1);
   if (expense) await db.update(expenses).set(values).where(eq(expenses.id, expense.id));
   else await db.insert(expenses).values({ ...values, tripId: result.receipt.tripId, claimantId: result.receipt.uploadedBy, receiptId: result.receipt.id, source: "RECEIPT" });
+  await db.update(receipts).set({ status: "READY_FOR_REVIEW", errorMessage: null }).where(eq(receipts.id, result.receipt.id));
   const [updated] = await db.select().from(expenses).where(eq(expenses.receiptId, result.receipt.id)).limit(1);
   return NextResponse.json({ expense: updated, message: "Расход сохранён" });
 }
