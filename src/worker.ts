@@ -1,8 +1,10 @@
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, lt, sql } from "drizzle-orm";
 import { db } from "./lib/db";
 import { categories, expenses, recognitionJobs, receipts } from "./lib/db/schema";
 import { createRecognitionProxyUrl } from "./lib/recognition-proxy";
 import { recognizeReceipt } from "./lib/receipt-recognition";
+
+const stalledJobTimeoutMs = 5 * 60_000;
 
 async function recognize(receipt: { id: string; mimeType: string }, attempt: number) {
   const key = process.env.MINIMAX_API_KEY;
@@ -25,6 +27,13 @@ async function resolveCategoryId(name: string | undefined) {
   const rows = await db.select({ id: categories.id, name: categories.name }).from(categories).where(eq(categories.active, true));
   const target = normalize(name);
   return rows.find((row) => normalize(row.name) === target || normalize(row.name).includes(target) || target.includes(normalize(row.name)))?.id;
+}
+
+async function recoverStalledJobs() {
+  const staleBefore = new Date(Date.now() - stalledJobTimeoutMs);
+  await db.update(recognitionJobs)
+    .set({ status: "PENDING", errorMessage: "Задача была автоматически возвращена в очередь после перезапуска worker", processedAt: null })
+    .where(and(eq(recognitionJobs.status, "PROCESSING"), lt(recognitionJobs.createdAt, staleBefore)));
 }
 
 async function processOne() {
@@ -91,6 +100,7 @@ async function processOne() {
 }
 
 async function loop() {
+  await recoverStalledJobs();
   while (true) {
     if (process.env.ENABLE_MINIMAX_RECOGNITION === "true") {
       const worked = await processOne();
