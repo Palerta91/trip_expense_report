@@ -16,7 +16,7 @@ export type ReceiptListItem = {
   canEdit: boolean;
 };
 
-const money = (amount: string | null, currency: string | null) => amount && currency ? new Intl.NumberFormat("ru-RU", { style: "currency", currency, maximumFractionDigits: 0 }).format(Number(amount)) : "Сумма не заполнена";
+const money = (amount: string | null, currency: string | null) => amount && currency ? new Intl.NumberFormat("ru-RU", { style: "currency", currency, minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(Number(amount)) : "Сумма не заполнена";
 
 export function ReceiptList({ tripId, receipts }: { tripId: string; receipts: ReceiptListItem[] }) {
   const [currency, setCurrency] = useState("ALL");
