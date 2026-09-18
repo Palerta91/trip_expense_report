@@ -13,16 +13,16 @@ export async function GET(request: Request, { params }: { params: Promise<{ rece
   const { receiptId } = await params;
   const parsedId = z.string().uuid().safeParse(receiptId);
   const url = new URL(request.url);
-  const startedAt = Number(url.searchParams.get("startedAt"));
+  const attempt = Number(url.searchParams.get("attempt"));
   const expiresAt = Number(url.searchParams.get("expiresAt"));
   const signature = url.searchParams.get("signature") ?? "";
-  if (!parsedId.success || !isRecognitionProxySignatureValid(receiptId, startedAt, expiresAt, signature)) return new NextResponse("Not found", { status: 404 });
+  if (!parsedId.success || !isRecognitionProxySignatureValid(receiptId, attempt, expiresAt, signature)) return new NextResponse("Not found", { status: 404 });
 
   const [result] = await db
     .select({ receipt: receipts })
     .from(receipts)
     .innerJoin(recognitionJobs, eq(recognitionJobs.receiptId, receipts.id))
-    .where(and(eq(receipts.id, parsedId.data), eq(recognitionJobs.status, "PROCESSING"), eq(recognitionJobs.createdAt, new Date(startedAt))))
+    .where(and(eq(receipts.id, parsedId.data), eq(recognitionJobs.status, "PROCESSING"), eq(recognitionJobs.attempts, attempt)))
     .limit(1);
   if (!result || !result.receipt.mimeType.startsWith("image/")) return new NextResponse("Not found", { status: 404 });
 

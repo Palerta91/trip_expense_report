@@ -4,12 +4,12 @@ import { categories, expenses, recognitionJobs, receipts } from "./lib/db/schema
 import { createRecognitionProxyUrl } from "./lib/recognition-proxy";
 import { recognizeReceipt } from "./lib/receipt-recognition";
 
-async function recognize(receipt: { id: string; mimeType: string }, startedAt: Date) {
+async function recognize(receipt: { id: string; mimeType: string }, attempt: number) {
   const key = process.env.MINIMAX_API_KEY;
   if (!key) throw new Error("MINIMAX_API_KEY не задан");
   if (!receipt.mimeType.startsWith("image/")) throw new Error("ИИ-распознавание доступно для изображений. Для PDF заполните расход вручную.");
   return recognizeReceipt({
-    imageUrl: createRecognitionProxyUrl(receipt.id, startedAt),
+    imageUrl: createRecognitionProxyUrl(receipt.id, attempt),
     apiKey: key,
     baseUrl: process.env.MINIMAX_API_BASE_URL,
     model: process.env.MINIMAX_MODEL
@@ -44,15 +44,15 @@ async function processOne() {
           select 1 from ${recognitionJobs}
           where ${recognitionJobs.id} = ${claimedJob.id}
             and ${recognitionJobs.status} = 'PROCESSING'
-            and ${recognitionJobs.createdAt} = ${claimedJob.createdAt}
+            and ${recognitionJobs.attempts} = ${claimedJob.attempts}
         )
     `);
-    const extracted = await recognize(receipt, claimedJob.createdAt);
+    const extracted = await recognize(receipt, claimedJob.attempts);
     const categoryId = await resolveCategoryId(extracted.category);
     const rate = extracted.currency === "RUB" ? 1 : undefined;
     const merchant = extracted.merchantRussian || extracted.merchantOriginal || "Не определено";
     await db.transaction(async (tx) => {
-      const [activeJob] = await tx.select({ id: recognitionJobs.id }).from(recognitionJobs).where(and(eq(recognitionJobs.id, claimedJob.id), eq(recognitionJobs.status, "PROCESSING"), eq(recognitionJobs.createdAt, claimedJob.createdAt))).limit(1);
+      const [activeJob] = await tx.select({ id: recognitionJobs.id }).from(recognitionJobs).where(and(eq(recognitionJobs.id, claimedJob.id), eq(recognitionJobs.status, "PROCESSING"), eq(recognitionJobs.attempts, claimedJob.attempts))).limit(1);
       if (!activeJob) return;
       const values = {
         tripId: receipt.tripId,
@@ -75,15 +75,15 @@ async function processOne() {
       if (existingExpense) await tx.update(expenses).set({ ...values, updatedAt: new Date() }).where(eq(expenses.id, existingExpense.id));
       else await tx.insert(expenses).values(values);
       await tx.update(receipts).set({ status: "READY_FOR_REVIEW", extracted }).where(eq(receipts.id, receipt.id));
-      await tx.update(recognitionJobs).set({ status: "DONE", processedAt: new Date(), errorMessage: null }).where(eq(recognitionJobs.id, claimedJob.id));
+      await tx.update(recognitionJobs).set({ status: "DONE", processedAt: new Date(), errorMessage: null }).where(and(eq(recognitionJobs.id, claimedJob.id), eq(recognitionJobs.status, "PROCESSING"), eq(recognitionJobs.attempts, claimedJob.attempts)));
     });
   } catch (error) {
     const message = error instanceof Error ? error.message.slice(0, 1500) : "Неизвестная ошибка распознавания";
     await db.transaction(async (tx) => {
-      const [activeJob] = await tx.select({ id: recognitionJobs.id }).from(recognitionJobs).where(and(eq(recognitionJobs.id, claimedJob.id), eq(recognitionJobs.status, "PROCESSING"), eq(recognitionJobs.createdAt, claimedJob.createdAt))).limit(1);
+      const [activeJob] = await tx.select({ id: recognitionJobs.id }).from(recognitionJobs).where(and(eq(recognitionJobs.id, claimedJob.id), eq(recognitionJobs.status, "PROCESSING"), eq(recognitionJobs.attempts, claimedJob.attempts))).limit(1);
       if (!activeJob) return;
       await tx.update(receipts).set({ status: "FAILED", errorMessage: message }).where(eq(receipts.id, receipt.id));
-      await tx.update(recognitionJobs).set({ status: "FAILED", processedAt: new Date(), errorMessage: message }).where(eq(recognitionJobs.id, claimedJob.id));
+      await tx.update(recognitionJobs).set({ status: "FAILED", processedAt: new Date(), errorMessage: message }).where(and(eq(recognitionJobs.id, claimedJob.id), eq(recognitionJobs.status, "PROCESSING"), eq(recognitionJobs.attempts, claimedJob.attempts)));
     });
     console.error("Recognition job failed", claimedJob.id, message);
   }
