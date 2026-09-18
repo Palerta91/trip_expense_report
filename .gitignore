@@ -1,5 +1,6 @@
 node_modules
 .next
+# Local secrets and runtime configuration. Never commit these files.
 .env
 .env.*
 !.env.example
